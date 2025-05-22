@@ -46,7 +46,8 @@ Ogni firma su un documento viene registrata come un blocco nella tabella `signat
 - `signer` (VARCHAR(255)): Nome o identificativo del firmatario.
 - `document_hash` (VARCHAR(64)): Hash SHA-256 del contenuto del documento originale. Questo hash rimane costante per tutte le firme della stessa catena sullo stesso documento.
 - `prev_hash` (VARCHAR(128), NULLABLE): Hash della firma (`signature`) del blocco precedente nella catena. Per il primo blocco (blocco genesi), questo valore è `NULL`.
-- `signature` (VARCHAR(128)): Firma digitale RSA. Viene calcolata firmando la concatenazione di `prev_hash` (o una stringa vuota se `NULL`) e `document_hash` del blocco corrente. Questo campo rappresenta l'hash del blocco corrente e viene usato come `prev_hash` dal blocco successivo.
+- `chain_hash` (TEXT, GENERATED ALWAYS AS STORED): **Colonna Calcolata Automaticamente.** Questa colonna contiene l'hash SHA-256 della concatenazione di `prev_hash` (o una stringa vuota se `prev_hash` è `NULL`) e `document_hash` del blocco corrente. In pratica, rappresenta l'hash dei dati che vengono effettivamente firmati digitalmente per produrre il campo `signature`. Viene calcolata e memorizzata automaticamente dal database (`encode(digest(coalesce(prev_hash, '') || document_hash, 'sha256'), 'hex')`). Sebbene non sia utilizzata attivamente dallo script Python per la logica di costruzione o verifica della catena (che ricalcola questi dati in memoria), può essere utile per query dirette al database, per debug, o per meccanismi di verifica alternativi a livello di database.
+- `signature` (VARCHAR(128)): Firma digitale RSA. Viene calcolata firmando la concatenazione di `prev_hash` (o una stringa vuota se `NULL`) e `document_hash` del blocco corrente (ovvero, firmando i dati il cui hash è rappresentato da `chain_hash`). Questo campo rappresenta l'hash crittografico del blocco corrente e viene usato come `prev_hash` dal blocco successivo.
 - `created_at` (TIMESTAMP DEFAULT CURRENT_TIMESTAMP): Timestamp di creazione del blocco.
 
 ### Esempio di Record nella Tabella
@@ -132,6 +133,25 @@ graph TD
     style H_DOC fill:#ECECEC,stroke:#333,stroke-width:2px
 ```
 
+### 🛡️ Verifica dell'Integrità del Documento Originale (Esterna alla Catena)
+
+Mentre la `signature_chain` garantisce l'integrità e la sequenzialità delle firme apposte su un documento con un determinato `document_hash`, è cruciale considerare anche l'integrità del documento originale archiviato esternamente (ad esempio, su un sistema di Document Management System come Documentum, identificato tramite `document_id`).
+
+Il `document_hash` memorizzato nella catena rappresenta l'impronta digitale del documento al momento in cui la catena di firme è stata iniziata. Per una verifica completa e robusta, il processo dovrebbe includere i seguenti passaggi aggiuntivi, esterni alla logica intrinseca della catena di firme:
+
+1.  **Recupero del Documento Attuale**: Utilizzando il `document_id` presente nella `signature_chain`, recuperare la versione corrente del documento dal suo sistema di archiviazione primario.
+2.  **Calcolo dell'Hash Attuale**: Calcolare l'hash SHA-256 del documento recuperato al punto precedente.
+3.  **Confronto Fondamentale**: Confrontare questo hash appena calcolato con il `document_hash` memorizzato nel primo blocco (o in qualsiasi blocco, dato che dovrebbe essere identico per tutti i blocchi relativi allo stesso `document_id`) della `signature_chain`.
+
+**Se i due hash (quello calcolato dal documento attuale e quello memorizzato nella catena) non corrispondono, ciò indica inequivocabilmente che il documento originale è stato alterato o sostituito nel sistema di archiviazione dopo l'inizio del processo di firma.**
+
+Questo controllo è essenziale perché:
+
+- La catena di firme, di per sé, valida solo che le approvazioni sono state date in sequenza su un documento che *aveva* un certo contenuto (identificato dal `document_hash` originale).
+- Non può, da sola, impedire o rilevare modifiche al file sorgente nel suo repository esterno.
+
+L'attuale script `main.py` si concentra sulla validazione dell'integrità interna della catena crittografica. L'implementazione della verifica del documento originale richiederebbe un'integrazione con il sistema di gestione documentale per recuperare il file basandosi sul `document_id`.
+
 ### ✅ Caratteristiche Chiave della Catena
 
 - **Immutabilità**: Una volta che un blocco è aggiunto, la sua `signature` dipende dal contenuto e dal blocco precedente. Modificare un blocco precedente invaliderebbe l'intera catena successiva.
@@ -214,6 +234,41 @@ python main.py
 
 La funzione `verify_chain` nello script:
 
+```mermaid
+sequenceDiagram
+    participant U as Utente/Processo
+    participant S as Script Python (main.py)
+    participant DB as PostgreSQL DB
+    participant Crypto as Libreria Crittografica
+
+    U->>S: Avvia verifica_catena(connessione_db, chiavi_pubbliche)
+    S->>DB: SELECT * FROM signature_chain ORDER BY id ASC
+    DB-->>S: Restituisce Righe (Blocchi della Catena)
+    S->>S: Inizializza previous_block_signature = NULL
+    S->>S: Itera su ogni Riga/Blocco
+        Note over S: Blocco Corrente
+        S->>S: Estrae: id, signer, document_hash, prev_hash (dalla riga), signature (dalla riga)
+        S->>S: Recupera chiave_pubblica del signer corrente
+        alt Blocco Genesi (prev_hash IS NULL)
+            S->>S: Verifica: prev_hash (dalla riga) == NULL?
+            Note over S: Dati da verificare = "" + document_hash
+            S->>Crypto: VerificaFirma(dati="", document_hash, signature (dalla riga), chiave_pubblica)
+            Crypto-->>S: Risultato Verifica (True/False)
+        else Blocco Successivo
+            S->>S: Verifica: prev_hash (dalla riga) == previous_block_signature?
+            Note over S: Dati da verificare = previous_block_signature + document_hash
+            S->>Crypto: VerificaFirma(previous_block_signature, document_hash, signature (dalla riga), chiave_pubblica)
+            Crypto-->>S: Risultato Verifica (True/False)
+        end
+        alt Verifica Fallita
+            S-->>U: ERRORE: Catena INVALIDA (dettagli errore)
+            Note over S: Interrompe iterazione
+        else Verifica Riuscita
+            S->>S: Aggiorna previous_block_signature = signature (dalla riga)
+        end
+    S-->>U: Catena VALIDA
+```
+
 1. Recupera tutti i record dalla tabella `signature_chain` in ordine di ID.
 2. Per ogni record:
     a. Controlla che `prev_hash` corrisponda alla `signature` del record precedente (a meno che non sia il blocco genesi, dove `prev_hash` deve essere `NULL`).
@@ -264,3 +319,35 @@ L'output sarà colorato e includerà emoji per indicare lo stato delle operazion
 
 🏁Fine della dimostrazione.
 ```
+
+## 📚 Appendice: Considerazioni sugli Algoritmi Crittografici
+
+In questa Proof of Concept (PoC), sono stati utilizzati i seguenti algoritmi crittografici:
+
+- **Algoritmo di Hash:** SHA-256
+- **Algoritmo di Firma Digitale:** RSA con chiavi a 2048 bit (padding PKCS1v15)
+
+Queste scelte rappresentano una base solida e ampiamente compatibile per molte applicazioni. Tuttavia, a seconda dei requisiti specifici di sicurezza, prestazioni e longevità del sistema, è possibile e spesso consigliabile considerare algoritmi più robusti o differenti.
+
+### Alternative per l'Hashing
+
+- **SHA-512:** Parte della famiglia SHA-2, produce un hash di 512 bit, offrendo una maggiore resistenza teorica alle collisioni rispetto a SHA-256. Può essere più performante su architetture a 64 bit.
+- **SHA-3 (es. SHA3-256, SHA3-512):** Uno standard più recente con un design interno diverso da SHA-2, considerato molto sicuro.
+- **BLAKE2/BLAKE3:** Algoritmi moderni noti per l'alta velocità e sicurezza. BLAKE3 è particolarmente efficiente e parallelizzabile.
+
+### Alternative per la Firma Digitale
+
+- **RSA con chiavi più lunghe (es. 3072 o 4096 bit):** Aumentare la lunghezza della chiave RSA ne incrementa la robustezza contro attacchi computazionali. RSA 2048 bit è generalmente sicuro, ma per requisiti di sicurezza più elevati o per una protezione a più lungo termine, chiavi più lunghe sono preferibili. Questo comporta un aumento del carico computazionale.
+- **Elliptic Curve Cryptography (ECC):**
+  - **ECDSA (Elliptic Curve Digital Signature Algorithm):** Offre un livello di sicurezza paragonabile a RSA ma con chiavi significativamente più corte (es. una chiave ECC a 256 bit equivale circa a una RSA a 3072 bit). Questo si traduce in chiavi più piccole e operazioni di firma/verifica potenzialmente più veloci. Curve comuni includono `P-256` (NIST), `P-384`, `P-521`.
+  - **EdDSA (Edwards-curve Digital Signature Algorithm, es. Ed25519):** Un altro schema di firma basato su curve ellittiche, apprezzato per la sua sicurezza e per essere meno suscettibile a errori di implementazione rispetto a ECDSA.
+
+### Fattori da Considerare per la Scelta
+
+1. **Livello di Sicurezza Richiesto:** Valutare la sensibilità dei dati e il periodo per cui la sicurezza deve essere garantita.
+2. **Prestazioni:** Algoritmi più complessi o con chiavi più lunghe possono avere un impatto sulle prestazioni. ECC/EdDSA spesso offrono un buon bilanciamento.
+3. **Compatibilità e Standard:** Considerare gli standard di settore, le normative applicabili e la compatibilità con altri sistemi.
+4. **Supporto delle Librerie:** Verificare che le librerie crittografiche utilizzate (come `cryptography` in Python) supportino pienamente gli algoritmi scelti.
+5. **Resistenza Quantistica:** È importante notare che gli algoritmi classici come RSA, ECC, SHA-2 e SHA-3 non sono considerati resistenti ad attacchi da parte di computer quantistici su larga scala. La crittografia post-quantistica (PQC) è un campo di ricerca attivo per affrontare questa futura minaccia. Per sistemi che richiedono una sicurezza a lunghissimo termine, monitorare gli sviluppi in PQC è fondamentale.
+
+La scelta degli algoritmi crittografici è una decisione critica che dovrebbe essere basata su un'attenta analisi dei rischi e dei requisiti specifici del progetto.
