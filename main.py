@@ -6,8 +6,6 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.exceptions import InvalidSignature
 import os
-
-# ==== COLORI PER CONSOLE ====
 class Colors:
     """
     Contiene codici di escape ANSI per colorare l'output della console.
