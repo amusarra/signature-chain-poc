@@ -2,11 +2,11 @@
 title: "La Signature Chain: Garanzia di Autenticità, Integrità e Sequenzialità nei Documenti Digitali"
 summary: "Scopri come la Signature Chain garantisce autenticità, integrità e sequenzialità nei documenti digitali, con un esempio pratico di Proof of Concept."
 author: "Antonio Musarra"
-date: "2025-05-23"
+create-date: "2025-05-23"
 categories: ["Tecnologia", "Sicurezza Informatica"]
 tags: ["Signature Chain", "Digital Signatures", "Cryptography", "PostgreSQL", "Python"]
 image: ""
-publish-date: "2025-05-26"
+date: "2025-05-26"
 status: "published"
 layout: "article"
 slug: "signature-chain-garanzia-autenticita-integrita-sequenzialita-documenti-digitali"
@@ -14,7 +14,18 @@ permalink: ""
 lang: "it"
 version: "1.0.0"
 scope: "Public"
+state: Release
 ---
+
+## Cronologia delle revisioni
+
+| Versione | Data       | Autore          | Descrizione delle Modifiche        |
+| :------- | :--------- | :-------------- | :--------------------------------- |
+| 1.0.0    | 2025-05-26 | Antonio Musarra | Prima pubblicazione dell'articolo. |
+
+[TOC]
+
+<div style="page-break-after: always; break-after: page;"></div>
 
 Nel contesto dell'attuale panorama digitale, la salvaguardia dell'integrità e dell'autenticità documentale costituisce una problematica di primaria importanza. La necessità di assicurare che un documento non sia stato oggetto di alterazioni e che le sottoscrizioni apposte siano verificate e sequenzialmente ordinate è un requisito imprescindibile per una molteplicità di processi giuridici, finanziari e amministrativi. Tentativi di manipolazione di clausole contrattuali post-sottoscrizione o l'inserimento fraudolento di firme clandestine rappresentano rischi intrinseci. 
 
@@ -27,6 +38,8 @@ La Signature Chain è definibile come una concatenazione crittograficamente vinc
 Ogni sottoscrizione è intrinsecamente legata alla precedente, costituendo una catena crittografica che assicura l'autenticità, l'integrità del dato e la sequenzialità delle apposizioni. Essa opera come un sigillo digitale che attesta: <u>"La presente sottoscrizione è stata apposta da un determinato soggetto, successivamente a un'altra sottoscrizione, e il documento possedeva *esattamente* il seguente contenuto in quel preciso istante."</u> Si tratta, in sostanza, di una **"cronistoria documentale"** che non può essere retroattivamente alterata, configurandosi come un registro immutabile di tutte le firme e del contenuto su cui esse sono state apposte. La fiducia conferita da tale meccanismo è di notevole entità.
 
 Ho sviluppato una Proof of Concept (PoC) pubblicata su mio repository GitHub (<https://github.com/amusarra/signature-chain-poc>) utilizzando tecnologie quali [PostgreSQL](https://www.postgresql.org/) e [Python](https://www.python.org/), con l'impiego di chiavi [RSA (Rivest-Shamir-Adleman)](https://it.wikipedia.org/wiki/RSA_(crittografia)) generate in memoria al solo scopo dimostrativo della funzionalità del meccanismo. Tuttavia, per applicazioni in contesti critici, quali il settore bancario o le transazioni legali vincolanti, si renderebbe indispensabile l'adozione di soluzioni di sicurezza avanzate. Tra queste, si annoverano gli [Hardware Security Modules (HSM)](https://en.wikipedia.org/wiki/Hardware_security_module) o i key vault (sistemi di custodia certificati per chiavi crittografiche), una [Timestamp Authority (TSA)](https://goodsign.io/term/Timestamp-Authority-TSA) per la certificazione temporale esatta (assicurando l'esatta data e ora di ogni sottoscrizione, fino al millisecondo, eliminando contestazioni temporali), e certificati digitali qualificati, rilasciati da enti certificatori riconosciuti. Pertanto, si sottolinea la natura non sperimentale ma robusta e legalmente valida di tale sistema per applicazioni reali.
+
+<div style="page-break-after: always; break-after: page;"></div>
 
 ## Architettura e funzionamento
 
@@ -55,6 +68,8 @@ graph LR
     style USER fill:#FFD700,stroke:#333,stroke-width:2px,color:#000
 ```
 
+**Figura 1**: Architettura del sistema di Signature Chain
+
 Il flusso mostrato dal precedente diagramma, è logico e trasparente: un'entità (sia essa un utente o un processo automatizzato) interagisce con l'applicazione Python, la quale stabilisce una connessione con il database PostgreSQL per gestire la tabella delle firme. Questa tabella rappresenta il fulcro del sistema, ove ogni segmento della cronistoria documentale viene registrato.
 
 La struttura di ciascun blocco è concepita per garantire un'elevata sicurezza e tracciabilità; ogni singolo elemento è inserito con una finalità precisa e contribuisce all'integrità complessiva della catena. Tale configurazione è paragonabile a una carta d'identità estremamente dettagliata per ogni singola firma:
@@ -67,6 +82,8 @@ La struttura di ciascun blocco è concepita per garantire un'elevata sicurezza e
 * **chain_hash** (TEXT, GENERATED ALWAYS AS STORED): colonna **calcolata automaticamente**. Questa colonna contiene un hash SHA-256 risultante dalla concatenazione del `prev_hash` (o una stringa vuota per il blocco genesi) e del `document_hash` del blocco corrente. Essa rappresenta l'hash dei dati che sono stati effettivamente sottoposti a firma digitale, prima dell'applicazione della firma stessa. Il database provvede autonomamente al calcolo e alla memorizzazione di questo valore, eliminando possibilità di errore o manipolazione. La sua presenza è una garanzia aggiuntiva che i dati su cui si basa la firma sono corretti e non sono stati alterati. Sebbene lo script Python in questa PoC non utilizzi attivamente questo campo per la logica di costruzione o verifica della catena (poiché i valori vengono ricalcolati dinamicamente per la massima sicurezza), la sua inclusione nel database può rivelarsi estremamente utile per query dirette, per controlli supplementari di integrità a livello di database, o per attività di debugging e audit esterni. Rappresenta un ulteriore livello di garanzia e trasparenza.  
 * **signature** (VARCHAR(128)): questo campo contiene la firma digitale RSA effettiva. Non si tratta di un semplice hash, bensì del risultato di un complesso processo crittografico che impiega la chiave privata del firmatario. La firma viene generata applicando l'algoritmo di firma alla concatenazione del `prev_hash` e del `document_hash` del blocco corrente. Questa signature funge da hash crittografico del blocco corrente, rappresentandone l'impronta unica e verificabile. Un aspetto fondamentale è che il valore di questa signature diviene il `prev_hash` per il blocco successivo, perpetuando così la catena in maniera indefinita (o fino alla cessazione delle sottoscrizioni). Questo meccanismo salda un blocco all'altro, conferendo alla catena la sua inalterabilità. Qualsiasi alterazione della firma invaliderebbe il blocco successivo.  
 * **created_at** (TIMESTAMP DEFAULT CURRENT_TIMESTAMP): questo campo registra il timestamp esatto di creazione del blocco, fino al millisecondo. La sua importanza è cruciale per la tracciabilità, per l'accertamento dell'ordine cronologico delle firme e per fornire una prova temporale in caso di controversie legali o audit. L'impossibilità di retrodatare o postdatare le firme è garantita da questo marcatore temporale.
+
+<div style="page-break-after: always; break-after: page;"></div>
 
 ### Esemplificazione dei Record nella Tabella
 
@@ -86,6 +103,10 @@ Questo blocco rappresenta l'elemento iniziale, la "genesi" della catena di firme
 | signature | a3f5b1...c72e | La firma digitale di Antonio, calcolata sulla concatenazione di una stringa vuota (per il `prev_hash` nullo) e l'hash del documento. Si tratta di una stringa esadecimale di 128 caratteri, risultato della sua sottoscrizione crittografica. |
 | created\_at | 2025-05-21 14:30:00.123456+00 | La data e l'ora precise di apposizione della firma da parte di Antonio, inclusi i microsecondi e il fuso orario UTC. Questo timestamp è cruciale per la cronologia. |
 
+**Tabella 1**: Esempio di Blocco 1 (Genesi)
+
+<div style="page-break-after: always; break-after: page;"></div>
+
 #### Blocco 2 (Firmatario: Marianna)
 
 Questo blocco segue il primo e si lega ad esso, incorporando la firma di *Marianna*. Rappresenta un blocco intermedio nella catena, dimostrando la sequenzialità delle sottoscrizioni. Marianna appone la sua firma *dopo* Antonio.
@@ -99,6 +120,8 @@ Questo blocco segue il primo e si lega ad esso, incorporando la firma di *Marian
 | prev\_hash | a3f5b1...c72e | Questo valore corrisponde alla signature di Antonio dal Blocco 1\. Costituisce il legame crittografico al blocco precedente, garantendo la sequenzialità. Questo è l'elemento chiave della concatenazione. |
 | signature | b8e0d9...f4a1 | La firma digitale di Marianna, calcolata sulla concatenazione della signature di Antonio (come `prev_hash`) e l'hash del documento. Questa firma è unica per questo blocco e per questa specifica sequenza. |
 | created\_at | 2025-05-21 14:35:00.654321+00 | La data e l'ora precise di apposizione della firma da parte di Marianna. Si noti che è successiva a quella di Antonio, confermando l'ordine cronologico. |
+
+**Tabella 2**: Esempio di Blocco 2
 
 ### Schema della catena di firme
 
@@ -155,7 +178,9 @@ graph TD
     style H_DOC fill:#ECECEC,stroke:#333,stroke-width:2px
 ```
 
-La freccia tratteggiata denota che la **Signature** di un blocco diviene il `prev_hash` del blocco successivo. È questa interdipendenza crittografica che conferisce alla catena la sua robustezza. Qualsiasi tentativo di alterazione di un blocco precedente, sia esso una minima modifica nell'hash del documento o nella firma, comporterebbe una discrepanza negli hash dei blocchi successivi, rendendo la catena **"rotta"** e, di conseguenza, invalida. 
+**Figura 2**: Schema della Signature Chain
+
+La freccia tratteggiata denota che la **Signature** di un blocco diviene il `prev_hash` del blocco successivo. È questa interdipendenza crittografica che conferisce alla catena la sua robustezza. Qualsiasi tentativo di alterazione di un blocco precedente, sia esso una minima modifica nell'hash del documento o nella firma, comporterebbe una discrepanza negli hash dei blocchi successivi, rendendo la catena **"rotta"** e, di conseguenza, invalida.
 
 ### Caratteristiche distintive della catena
 
@@ -166,6 +191,8 @@ Le proprietà intrinseche che conferiscono alla Signature Chain il suo valore e 
 * **Sequenzialità verificabile**: il `prev_hash` stabilisce un legame cronologico inconfutabile tra le firme. Ciò consente di accertare l'ordine esatto di apposizione delle firme, eliminando dubbi o contestazioni. Si genera una traccia di audit chiara e cristallina, essenziale per processi che richiedono una rigorosa cronologia, come contratti con molteplici firmatari o workflow di approvazione complessi.  
 * **Autenticità del firmatario**: ogni signature è generata utilizzando la chiave privata del firmatario, la quale è unica e segreta per tale individuo. Questo meccanismo consente la verifica dell'autenticità della firma tramite la chiave pubblica corrispondente, che è invece di dominio pubblico e può essere liberamente condivisa. L'identità del firmatario è crittograficamente garantita, escludendo l'impersonificazione.
 
+<div style="page-break-after: always; break-after: page;"></div>
+
 ## Meccanismi di sicurezza in PostgreSQL per la Signature Chain
 
 PostgreSQL, in quanto sistema di gestione di database relazionali (RDBMS) robusto e di comprovata affidabilità (ampiamente adottato in contesti aziendali critici proprio per la sua affidabilità intrinseca), offre una pluralità di meccanismi di sicurezza fondamentali per l'implementazione e il mantenimento dell'integrità e dell'immutabilità dei dati all'interno di una Signature Chain. Lo script `init.sql` (file di inizializzazione del database) illustra l'applicazione di alcuni di questi principi chiave, i quali costituiscono il fondamento per la costruzione di un sistema sicuro.
@@ -174,7 +201,7 @@ PostgreSQL, in quanto sistema di gestione di database relazionali (RDBMS) robust
 
 Questo principio di sicurezza fondamentale è una direttiva imprescindibile in qualsiasi architettura di sistema: **"Concedere a ogni entità solo i privilegi strettamente necessari per l'adempimento delle proprie funzioni"**. Esso prescrive che a un utente o a un'applicazione debbano essere attribuiti esclusivamente i privilegi minimi indispensabili per l'esecuzione delle proprie operazioni. Tale approccio è analogo alla concessione di chiavi di accesso unicamente alle aree pertinenti, anziché all'intera struttura. Nello script init.sql, questo principio è implementato con meticolosità e precisione attraverso:
 
-* Creazione di un utente applicativo dedicato:
+* **Creazione di un utente applicativo dedicato:**
 
   ```sql
   CREATE ROLE app_user WITH LOGIN PASSWORD 'app_password';
@@ -182,32 +209,34 @@ Questo principio di sicurezza fondamentale è una direttiva imprescindibile in q
 
   Viene istituito un ruolo specifico (`app_user`) destinato esclusivamente all'applicazione Python. Questo utente è mantenuto rigorosamente separato dall'utente amministratore del database (es. postgres), il quale detiene privilegi omnicomprensivi. Tale segregazione riduce significativamente il rischio in caso di compromissione: qualora un attore malevolo riuscisse a violare l'applicazione, l'accesso al database sarebbe limitato ai soli permessi concessi all'utente applicativo, non estendendosi all'intera base di dati.
 
-* Concessione di privilegi limitati:  
+* **Concessione di privilegi limitati:**  
   
   ```sql
   GRANT CONNECT ON DATABASE signature_demo TO app_user;
   ```
   
-  (Consente all'applicazione di stabilire una connessione al database signature\_demo.)  
+  Consente all'applicazione di stabilire una connessione al database signature\_demo.
   
   ```sql
   GRANT USAGE ON SCHEMA public TO app_user;
   ```
   
-  (Permette all'applicazione di utilizzare lo schema public, ove risiede la tabella signature\_chain.)  
+  Permette all'applicazione di utilizzare lo schema public, ove risiede la tabella signature\_chain. 
   
   ```sql
   GRANT SELECT, INSERT ON signature_chain TO app_user; 
   ```
   
-  (Conferisce all'applicazione i permessi di lettura (SELECT) e di inserimento (INSERT) di nuovi dati nella tabella signature\_chain.)  
+  Conferisce all'applicazione i permessi di lettura (SELECT) e di inserimento (INSERT) di nuovi dati nella tabella `signature_chain`. 
   
   ```sql
   GRANT USAGE ON SEQUENCE signature_chain_id_seq TO app_user;
   ```
   
-  (Autorizza l'applicazione all'utilizzo della sequenza preposta alla generazione degli identificativi automatici per i blocchi.)
+  Autorizza l'applicazione all'utilizzo della sequenza preposta alla generazione degli identificativi automatici per i blocchi.
 
+  
+  
   Al ruolo `app_user` sono attribuiti unicamente i permessi essenziali: la capacità di connettersi al database, di operare sullo schema pubblico, e, specificamente, i permessi di SELECT (lettura) e INSERT (aggiunta) di nuovi record nella tabella `signature_chain`, oltre all'autorizzazione all'uso della sequenza ID.
   
   È di fondamentale importanza notare l'assenza totale di permessi di UPDATE (modifica) o DELETE (cancellazione). Questa restrizione è cruciale per l'immutabilità della catena: una volta che un blocco è stato inserito, l'applicazione non è in grado di modificarlo o rimuoverlo. Tale dato è, pertanto, blindato e inalterabile.
@@ -268,6 +297,8 @@ Questa revoca rafforza ulteriormente le policy RLS. Essa agisce come un meccanis
 
 La combinazione sinergica del principio del privilegio minimo (concessione esclusiva dei permessi strettamente necessari) con la robustezza della Sicurezza a Livello di Riga (controllo granulare riga per riga) consente a PostgreSQL di fornire un ambiente in cui l'immutabilità della Signature Chain è significativamente rafforzata. Ciò rende estremamente ardua, se non impossibile, la manomissione dei record una volta che sono stati inseriti da un utente con privilegi limitati. Tale architettura costituisce un pilastro cruciale per la fiducia e la validità a lungo termine dei documenti firmati digitalmente, poiché garantisce l'inalterabilità dei dati all'interno del database.
 
+<div style="page-break-after: always; break-after: page;"></div>
+
 ## Verifica dell'integrità del documento originale (considerazioni esterne)
 
 È imperativo distinguere tra l'integrità della catena di firme (ovvero, la coerenza e l'integrità dei blocchi memorizzati nel database) e l'integrità del documento originale, il quale potrebbe essere custodito in un repository esterno, quale un server di archiviazione, un servizio cloud, o un sistema di gestione documentale (DMS).
@@ -281,6 +312,8 @@ Per una verifica completa dell'integrità, si rende quindi necessaria l'esecuzio
 3. **Confronto fondamentale**: si confronta l'hash appena calcolato con il `document_hash` memorizzato nel primo blocco della `signature_chain` (o in qualsiasi blocco, poiché tale hash dovrebbe essere identico per tutti i blocchi relativi al medesimo `document_id`, in quanto tutti si riferiscono alla stessa versione originale). Questo confronto rappresenta il momento cruciale della verifica.
 
 Qualora questi due hash non coincidano, ciò indica che il documento originale è stato alterato o sostituito dopo l'inizio del processo di firma. Tale discrepanza segnala immediatamente che la versione del documento in possesso non corrisponde alla quella su cui sono state apposte le firme. L'implementazione di questo controllo richiede, pertanto, che la Signature Chain sia integrata in modo sinergico con il sistema di gestione documentale, affinché possano comunicare e confrontare gli hash in maniera automatizzata. Questo passaggio è cruciale per completare il ciclo di sicurezza e fornire una garanzia esaustiva sull'integrità del documento.
+
+<div style="page-break-after: always; break-after: page;"></div>
 
 ## Guida all'avvio della Proof of Concept (PoC)
 
@@ -336,6 +369,8 @@ Questo comando esegue una serie di operazioni automatizzate in background:
 * Rende disponibile la porta 5432 del database sull'host locale, consentendo all'applicazione Python di connettersi. L'opzione `-d` al termine del comando indica che il container verrà eseguito in modalità **"detached"**, ovvero in background, permettendo all'utente di continuare a utilizzare il terminale.
 * Rende disponibile alla porta 8080 del sistema host il servizio di gestione del database web based chiamato [Adminer](https://www.adminer.org/en/).
 
+<div style="page-break-after: always; break-after: page;"></div>
+
 ### 4. Esecuzione dello Script di firma e verifica
 
 Lo script `main.py` costituisce il nucleo della Proof of Concept e simula due scenari distinti, al fine di illustrare il funzionamento della Signature Chain in condizioni ideali e in presenza di tentativi di manomissione. Tale dimostrazione evidenzia la robustezza e la resilienza della catena:
@@ -360,9 +395,15 @@ Per avviare l'esecuzione dello script, utilizzare il seguente comando nella cons
 python main.py
 ```
 
-### 5. Processo di Verifica della Catena
+### 5. Processo di verifica della catena
 
-La funzione `verify_chain` all'interno dello script è incaricata di eseguire un'analisi forense per accertare l'integrità della catena. Tale processo è meticoloso e garantisce la perfezione di ogni anello della catena, prevenendo qualsiasi tentativo di frode. Di seguito è illustrato il suo funzionamento, passo dopo passo, tramite un diagramma di sequenza che delinea le interazioni tra i vari componenti.
+La verifica della catena è essenziale. Vediamo i passaggi per verificare l'integrità della catena di firme e l'importanza di controllare anche il documento originale. A seguire è riportato un diagramma a blocchi che illustra il processo di verifica semplificato della catena di firme.
+
+![processo_verifica_semplificato_1](../resources/images/processo_verifica_semplificato_1.png)
+
+**Figura 3**: Processo di verifica semplificato della catena di firme
+
+Scendendo nel dettaglio implementativo, la funzione `verify_chain` all'interno dello script è incaricata di eseguire un'analisi forense per accertare l'integrità della catena. Tale processo è meticoloso e garantisce la perfezione di ogni anello della catena, prevenendo qualsiasi tentativo di frode. Di seguito è illustrato il suo funzionamento, passo dopo passo, tramite un diagramma di sequenza che delinea le interazioni tra i vari componenti.
 
 ```mermaid
 sequenceDiagram
@@ -399,6 +440,8 @@ sequenceDiagram
     S-->>U: Catena VALIDA
 ```
 
+**Figura 4**: Diagramma di sequenza del processo di verifica della catena di firme.
+
 In sintesi, il processo di verifica si articola come segue:
 
 1. Recupero di tutti i record dalla tabella `signature_chain` in ordine crescente di ID, dal più antico al più recente. Questa operazione è analoga a un'ispezione meticolosa di un registro pagina per pagina.
@@ -413,43 +456,45 @@ In sintesi, il processo di verifica si articola come segue:
 
 L'esecuzione dello script genererà un output nella console, formattato con colori ed emoji per una chiara indicazione dello stato delle operazioni. Tale output è concepito come un report in tempo reale, di facile interpretabilità. Di seguito è presentato un estratto esemplificativo dell'output, con i messaggi chiave che guidano l'utente attraverso la dimostrazione:
 
-💾 Tentativo di pulire la tabella signature\_chain come utente 'postgres'...  
-✅ Tabella signature\_chain pulita con successo.
+```plain
+💾 Tentativo di pulire la tabella signature_chain come utente 'postgres'...  
+✅ Tabella signature_chain pulita con successo.
 
-\===== SCENARIO 1: Utente Applicativo (app\_user) \=====  
-💾 Tentativo di connessione al database 'signature\_demo' come utente 'app\_user'...  
-✅ Connessione come app\_user riuscita.
+\===== SCENARIO 1: Utente Applicativo (app_user) \=====  
+💾 Tentativo di connessione al database 'signature_demo' come utente 'app_user'...  
+✅ Connessione come app_user riuscita.
 
 🔗==== Sequenza Firme Inserite nella Catena \====  
 ℹ️ Documento Originale: "Contenuto documento firmato da più persone"  
-ℹ️ Hash Documento Originale: \<hash\_del\_documento\>  
+ℹ️ Hash Documento Originale: \<hash_del_documento\>  
 \----------------------------------------------------------------------  
 🧱 ID Blocco: 1  
   Firmatario: Antonio  
-  Hash Documento Firmato: \<hash\_del\_documento\>  
+  Hash Documento Firmato: \<hash_del_documento\>  
   Hash Catena Precedente: N/A (Blocco Genesi)  
-  Hash Catena Corrente (Firma del Blocco): \<signature\_blocco\_1\>...  
+  Hash Catena Corrente (Firma del Blocco): \<signature_blocco_1\>...  
 \----------------------------------------------------------------------  
 🧱 ID Blocco: 2  
   Firmatario: Marianna  
-  Hash Documento Firmato: \<hash\_del\_documento\>  
-  Hash Catena Precedente: \<signature\_blocco\_1\>  
-  Hash Catena Corrente (Firma del Blocco): \<signature\_blocco\_2\>...  
+  Hash Documento Firmato: \<hash_del_documento\>  
+  Hash Catena Precedente: \<signature_blocco_1\>  
+  Hash Catena Corrente (Firma del Blocco): \<signature_blocco_2\>...  
 \----------------------------------------------------------------------  
 ... (altre firme e output di verifica) ...
 
-🔗==== Verifica Integrità Catena Firme (Contesto: app\_user \- Post Inserimento) \====  
+🔗==== Verifica Integrità Catena Firme (Contesto: app_user - Post Inserimento) \====  
 ...  
 ✅ La catena delle firme è VALIDA. Integrità CONFERMATA. ✅  
 \----------------------------------------------------------------------
 
-⚠️---- 1.2 Tentativo di Manomissione UPDATE (come app\_user) \----  
-ℹ️ Tentativo di UPDATE del document\_hash del blocco ID: 2 (Firmatario: Marianna) come 'app\_user'.  
-✅ SUCCESSO: Tentativo di UPDATE BLOCCATO dal DB per 'app\_user' come previsto\!  
-  ℹ️ Errore DB (SQLSTATE 42501): permission denied for table signature\_chain  
+⚠️---- 1.2 Tentativo di Manomissione UPDATE (come app_user) \----  
+ℹ️ Tentativo di UPDATE del document_hash del blocco ID: 2 (Firmatario: Marianna) come 'app_user'.  
+✅ SUCCESSO: Tentativo di UPDATE BLOCCATO dal DB per 'app_user' come previsto\!  
+  ℹ️ Errore DB (SQLSTATE 42501): permission denied for table signature_chain  
 ... (output scenario superuser con manomissione e fallimento verifica crittografica) ...
 
 🏁Fine della dimostrazione.
+```
 
 Questo output guida l'utente attraverso le fasi della dimostrazione, evidenziando i successi (✅) e i fallimenti (⚠️) in modo chiaro. Si osserverà come il database blocchi i tentativi di manomissione da parte dell'utente con permessi limitati (grazie alla RLS!), e come il meccanismo di verifica della catena rilevi le alterazioni qualora un superutente riesca a modificarla (poiché la crittografia, per sua natura, non ammette falsificazioni!).
 
