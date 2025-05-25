@@ -12,7 +12,7 @@ layout: "article"
 slug: "signature-chain-garanzia-autenticita-integrita-sequenzialita-documenti-digitali"
 permalink: ""
 lang: "it"
-version: "v1.1.1"
+version: "v1.1.2"
 scope: "Public"
 state: Release
 ---
@@ -24,6 +24,7 @@ state: Release
 | 1.0.0    | 2025-05-17 | Antonio Musarra | Primo stesura                              |
 | 1.1.0    | 2025-05-24 | Antonio Musarra | Aggiunto il capitolo Appendice             |
 | 1.1.1    | 2025-05-25 | Antonio Musarra | Correzioni di typo error e semplificazione |
+| 1.1.2    | 2025-05-25 | Antonio Musarra | Revisione capitolo Riferimenti utili       |
 
 [TOC]
 
