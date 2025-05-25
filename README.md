@@ -16,7 +16,7 @@ Questa POC utilizza chiavi RSA generate in memoria e non persistite. In un ambie
 
 Per una comprensione dettagliata dell'architettura, del funzionamento della catena di firme, della struttura dei dati, dei meccanismi di verifica e delle considerazioni sulla sicurezza crittografica implementate in questa PoC, si rimanda all'articolo completo:
 
-**"[La Signature Chain: Garanzia di Autenticità, Integrità e Sequenzialità nei Documenti Digitali](https://codemotion.com/magazine/link-all-articolo-quando-disponibile)"** pubblicato su Codemotion Magazine.
+[La Signature Chain: Garanzia di Autenticità, Integrità e Sequenzialità nei Documenti Digitali](docs/blog/signature-chain-garanzia-autenticita-Integrita-sequenzialita-documenti-digitali.md)
 
 L'articolo approfondisce:
 
