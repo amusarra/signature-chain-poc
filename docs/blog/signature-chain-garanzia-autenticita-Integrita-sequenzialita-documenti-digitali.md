@@ -12,7 +12,7 @@ layout: "article"
 slug: "signature-chain-garanzia-autenticita-integrita-sequenzialita-documenti-digitali"
 permalink: ""
 lang: "it"
-version: "1.1.1"
+version: "v1.1.1"
 scope: "Public"
 state: Release
 ---
@@ -21,7 +21,7 @@ state: Release
 
 | Versione | Data       | Autore          | Descrizione delle Modifiche                |
 | :------- | :--------- | :-------------- | :----------------------------------------- |
-| 1.0.0    | 2025-05-17 | Antonio Musarra | Primo rilascio                             |
+| 1.0.0    | 2025-05-17 | Antonio Musarra | Primo stesura                              |
 | 1.1.0    | 2025-05-24 | Antonio Musarra | Aggiunto il capitolo Appendice             |
 | 1.1.1    | 2025-05-25 | Antonio Musarra | Correzioni di typo error e semplificazione |
 
@@ -29,7 +29,7 @@ state: Release
 
 <div style="page-break-after: always; break-after: page;"></div>
 
-Nel contesto dell'attuale panorama digitale, la salvaguardia dell'integrità e dell'autenticità documentale costituisce una problematica di primaria importanza. La necessità di assicurare che un documento non sia stato oggetto di alterazioni e che le sottoscrizioni apposte siano verificate e sequenzialmente ordinate è un requisito imprescindibile per una molteplicità di processi giuridici, finanziari e amministrativi. Tentativi di manipolazione di clausole contrattuali post-sottoscrizione o l'inserimento fraudolento di firme clandestine rappresentano rischi intrinseci. 
+Nel contesto dell'attuale panorama digitale, la salvaguardia dell'integrità e dell'autenticità documentale costituisce una problematica di primaria importanza. La necessità di assicurare che un documento non sia stato oggetto di alterazioni e che le sottoscrizioni apposte siano verificate e sequenzialmente ordinate è un requisito imprescindibile per una molteplicità di processi giuridici, finanziari e amministrativi. Tentativi di manipolazione di clausole contrattuali post-sottoscrizione o l'inserimento fraudolento di firme clandestine rappresentano rischi intrinseci.
 
 L'obiettivo dell'articolo si propone di illustrare la **Signature Chain** come soluzione per la sicurezza dei documenti digitali, garantendo l'inalterabilità perpetua delle firme, l'integrità del contenuto e la rigorosa sequenzialità delle apposizioni. Tale metodologia conferisce un elevato grado di affidabilità, assicurando l'inviolabilità del documento e l'immodificabilità della sua cronistoria. Per una comprensione pratica, l'articolo include anche un esempio dimostrativo tramite una **Proof of Concept (PoC)**.
 
@@ -37,9 +37,9 @@ L'obiettivo dell'articolo si propone di illustrare la **Signature Chain** come s
 
 La Signature Chain è definibile come una concatenazione crittograficamente vincolata di firme digitali apposte su un documento. La sua struttura è assimilabile a una catena fisica, **ove ciascun anello**, rappresentato da una firma digitale, **è saldato in maniera indissolubile al suo predecessore**. L'impossibilità di disconnettere o interporre elementi intermedi costituisce un principio cardine.
 
-Ogni sottoscrizione è intrinsecamente legata alla precedente, costituendo una catena crittografica che assicura l'autenticità, l'integrità del dato e la sequenzialità delle apposizioni. Essa opera come un sigillo digitale che attesta: <u>"La presente sottoscrizione è stata apposta da un determinato soggetto, successivamente a un'altra sottoscrizione, e il documento possedeva *esattamente* il seguente contenuto in quel preciso istante."</u> Si tratta, in sostanza, di una **"cronistoria documentale"** che non può essere retroattivamente alterata, configurandosi come un registro immutabile di tutte le firme e del contenuto su cui esse sono state apposte. La fiducia conferita da tale meccanismo è di notevole entità.
+Ogni sottoscrizione è intrinsecamente legata alla precedente, costituendo una catena crittografica che assicura l'autenticità, l'integrità del dato e la sequenzialità delle apposizioni. Essa opera come un sigillo digitale che attesta: "La presente sottoscrizione è stata apposta da un determinato soggetto, successivamente a un'altra sottoscrizione, e il documento possedeva *esattamente* il seguente contenuto in quel preciso istante." Si tratta, in sostanza, di una **"cronistoria documentale"** che non può essere retroattivamente alterata, configurandosi come un registro immutabile di tutte le firme e del contenuto su cui esse sono state apposte. La fiducia conferita da tale meccanismo è di notevole entità.
 
-Ho sviluppato una Proof of Concept (PoC) pubblicata su mio repository GitHub (<https://github.com/amusarra/signature-chain-poc>) utilizzando tecnologie quali [PostgreSQL](https://www.postgresql.org/) e [Python](https://www.python.org/), con l'impiego di chiavi [RSA (Rivest-Shamir-Adleman)](https://it.wikipedia.org/wiki/RSA_(crittografia)) generate in memoria al solo scopo dimostrativo della funzionalità del meccanismo. Tuttavia, per applicazioni in contesti critici, quali il settore bancario o le transazioni legali vincolanti, si renderebbe indispensabile l'adozione di soluzioni di sicurezza avanzate. Tra queste, si annoverano gli [Hardware Security Modules (HSM)](https://en.wikipedia.org/wiki/Hardware_security_module) o i key vault (sistemi di custodia certificati per chiavi crittografiche), una [Timestamp Authority (TSA)](https://goodsign.io/term/Timestamp-Authority-TSA) per la certificazione temporale esatta (assicurando l'esatta data e ora di ogni sottoscrizione, fino al millisecondo, eliminando contestazioni temporali), e certificati digitali qualificati, rilasciati da enti certificatori riconosciuti. Pertanto, si sottolinea la natura non sperimentale ma robusta e legalmente valida di tale sistema per applicazioni reali.
+A scopo dimostrativo, ho realizzato una Proof of Concept (PoC), disponibile su GitHub (<https://github.com/amusarra/signature-chain-poc>), usando PostgreSQL e Python che mostra il funzionamento del meccanismo. Le chiavi RSA, generate in memoria, sono state impiegate esclusivamente per la dimostrazione. Tuttavia, per applicazioni in contesti critici, quali il settore bancario o le transazioni legali vincolanti, si renderebbe indispensabile l'adozione di soluzioni di sicurezza avanzate. Tra queste, si annoverano gli [Hardware Security Modules (HSM)](https://en.wikipedia.org/wiki/Hardware_security_module) o i key vault (sistemi di custodia certificati per chiavi crittografiche), una [Timestamp Authority (TSA)](https://goodsign.io/term/Timestamp-Authority-TSA) per la certificazione temporale esatta (assicurando l'esatta data e ora di ogni sottoscrizione, fino al millisecondo, eliminando contestazioni temporali), e certificati digitali qualificati, rilasciati da enti certificatori riconosciuti. Pertanto, si sottolinea la natura non sperimentale ma robusta e legalmente valida di tale sistema per applicazioni reali.
 
 <div style="page-break-after: always; break-after: page;"></div>
 
@@ -197,11 +197,11 @@ Le proprietà intrinseche che conferiscono alla Signature Chain il suo valore e 
 
 ## Meccanismi di sicurezza in PostgreSQL per la Signature Chain
 
-PostgreSQL, in quanto sistema di gestione di database relazionali (RDBMS) robusto e di comprovata affidabilità (ampiamente adottato in contesti aziendali critici proprio per la sua affidabilità intrinseca), offre una pluralità di meccanismi di sicurezza fondamentali per l'implementazione e il mantenimento dell'integrità e dell'immutabilità dei dati all'interno di una Signature Chain. Lo script `init.sql` (file di inizializzazione del database) illustra l'applicazione di alcuni di questi principi chiave, i quali costituiscono il fondamento per la costruzione di un sistema sicuro.
+PostgreSQL, in quanto sistema di gestione di database relazionali ([RDBMS](https://en.wikipedia.org/wiki/Relational_database)) robusto e di comprovata affidabilità (ampiamente adottato in contesti aziendali critici proprio per la sua affidabilità intrinseca), offre una pluralità di meccanismi di sicurezza fondamentali per l'implementazione e il mantenimento dell'integrità e dell'immutabilità dei dati all'interno di una Signature Chain. Lo script `init.sql` (file di inizializzazione del database) illustra l'applicazione di alcuni di questi principi chiave, i quali costituiscono il fondamento per la costruzione di un sistema sicuro.
 
-### 1. Principio del Privilegio Minimo (Least Privilege Principle)
+### 1. Principio del privilegio minimo (Least Privilege Principle)
 
-Questo principio di sicurezza fondamentale è una direttiva imprescindibile in qualsiasi architettura di sistema: **"Concedere a ogni entità solo i privilegi strettamente necessari per l'adempimento delle proprie funzioni"**. Esso prescrive che a un utente o a un'applicazione debbano essere attribuiti esclusivamente i privilegi minimi indispensabili per l'esecuzione delle proprie operazioni. Tale approccio è analogo alla concessione di chiavi di accesso unicamente alle aree pertinenti, anziché all'intera struttura. Nello script init.sql, questo principio è implementato con meticolosità e precisione attraverso:
+Questo principio di sicurezza fondamentale è una direttiva imprescindibile in qualsiasi architettura di sistema: **"Concedere a ogni entità solo i privilegi strettamente necessari per l'adempimento delle proprie funzioni"**. Esso prescrive che a un utente o a un'applicazione debbano essere attribuiti esclusivamente i privilegi minimi indispensabili per l'esecuzione delle proprie operazioni. Tale approccio è analogo alla concessione di chiavi di accesso unicamente alle aree pertinenti, anziché all'intera struttura. Nello script `init.sql`, questo principio è implementato con meticolosità e precisione attraverso:
 
 * **Creazione di un utente applicativo dedicato:**
 
@@ -243,7 +243,7 @@ Questo principio di sicurezza fondamentale è una direttiva imprescindibile in q
   
   È di fondamentale importanza notare l'assenza totale di permessi di UPDATE (modifica) o DELETE (cancellazione). Questa restrizione è cruciale per l'immutabilità della catena: una volta che un blocco è stato inserito, l'applicazione non è in grado di modificarlo o rimuoverlo. Tale dato è, pertanto, blindato e inalterabile.
 
-### 2. Sicurezza a Livello di Riga (Row Level Security - RLS)
+### 2. Sicurezza a livello di riga (Row Level Security - RLS)
 
 La [RLS](https://www.postgresql.org/docs/current/ddl-rowsecurity.html) in PostgreSQL è una funzionalità di sicurezza avanzata e di notevole potenza che consente la definizione di policy granulari. Tali policy controllano quali righe (ovvero, quali record o "blocchi" della catena) possono essere visualizzate o modificate da specifici utenti o ruoli, anche qualora questi utenti detengano permessi più ampi a livello di tabella. Questo meccanismo agisce come un filtro selettivo all'ingresso di ogni riga del database, determinando l'accesso o la manipolazione dei dati. La RLS introduce un ulteriore strato di controllo granulare, incrementando significativamente la sicurezza del sistema e prevenendo accessi o modifiche non autorizzate anche da parte di utenti con permessi tabellari più ampi. Nello script `init.sql`, la RLS è configurata come segue:
 
@@ -297,7 +297,7 @@ In conformità con le migliori pratiche di sicurezza, lo script include altresì
 
 Questa revoca rafforza ulteriormente le policy RLS. Essa agisce come un meccanismo di controllo ridondante, simile all'impiego di cinture di sicurezza in presenza di airbag, per una sicurezza ottimale. Assicura che nessun utente privo di permessi specifici possa modificare o eliminare i dati della catena, anche in circostanze in cui le policy RLS non fossero attive o fossero configurate in modo improprio. Si tratta di una misura di sicurezza **"a prova di errore"**.
 
-La combinazione sinergica del principio del privilegio minimo (concessione esclusiva dei permessi strettamente necessari) con la robustezza della Sicurezza a Livello di Riga (controllo granulare riga per riga) consente a PostgreSQL di fornire un ambiente in cui l'immutabilità della Signature Chain è significativamente rafforzata. Ciò rende estremamente ardua, se non impossibile, la manomissione dei record una volta che sono stati inseriti da un utente con privilegi limitati. Tale architettura costituisce un pilastro cruciale per la fiducia e la validità a lungo termine dei documenti firmati digitalmente, poiché garantisce l'inalterabilità dei dati all'interno del database.
+La combinazione sinergica del principio del privilegio minimo (concessione esclusiva dei permessi strettamente necessari) con la robustezza della sicurezza a livello di riga (controllo granulare riga per riga) consente a PostgreSQL di fornire un ambiente in cui l'immutabilità della Signature Chain è significativamente rafforzata. Ciò rende estremamente ardua, se non impossibile, la manomissione dei record una volta che sono stati inseriti da un utente con privilegi limitati. Tale architettura costituisce un pilastro cruciale per la fiducia e la validità a lungo termine dei documenti firmati digitalmente, poiché garantisce l'inalterabilità dei dati all'interno del database.
 
 <div style="page-break-after: always; break-after: page;"></div>
 
@@ -319,15 +319,17 @@ Qualora questi due hash non coincidano, ciò indica che il documento originale �
 
 ## Guida all'avvio della Proof of Concept (PoC)
 
-Per avviare la Proof of Concept e sperimentare in prima persona il funzionamento della Signature Chain, si prega di attenersi ai seguenti passaggi. Verranno illustrate le precondizioni, le procedure di configurazione del database e l'esecuzione dello script dimostrativo.
+Per avviare la Proof of Concept e sperimentare "di persona, personalmente" il funzionamento della Signature Chain, si prega di attenersi ai seguenti passaggi. Saranno illustrate le precondizioni, le procedure di configurazione del database e l'esecuzione dello script dimostrativo.
 
 ### 1. Requisiti preliminari
 
-Prima di procedere, è necessario assicurarsi che i seguenti componenti software siano installati sull'ambiente operativo. Tali requisiti sono assimilabili agli ingredienti essenziali per una preparazione culinaria.
+Prima di procedere, è necessario assicurarsi che i seguenti componenti software siano installati sull'ambiente operativo.
 
-* [Podman](https://podman.io/) (o Docker, qualora già presente; si noti che i comandi podman-compose potrebbero presentare lievi differenze rispetto a docker-compose, ma tali discordanze sono generalmente minime). Questo strumento è impiegato per l'esecuzione del database in un ambiente isolato e pulito, prevenendo interferenze con il sistema operativo ospite. È concettualmente un "contenitore" virtuale dedicato al database.  
+* [Podman](https://podman.io/) (o Docker, qualora già presente; si noti che i comandi [podman-compose](https://docs.podman.io/en/v5.4.2/markdown/podman-compose.1.html) potrebbero presentare lievi differenze rispetto a [docker-compose](https://docs.docker.com/compose/), ma tali discordanze sono generalmente minime). Questo strumento è impiegato per l'esecuzione del database in un ambiente isolato e pulito, prevenendo interferenze con il sistema operativo ospite. È concettualmente un "contenitore" virtuale dedicato al database.  
 * Python 3.9 o versioni successive (es. Python 3.10, 3.11). Questo è il linguaggio di programmazione in cui è stato sviluppato lo script principale della presente PoC. È fondamentale che sia installato correttamente.  
 * Librerie Python specifiche, necessarie per l'interazione con il database e per le operazioni crittografiche: [psycopg2-binary](https://pypi.org/project/psycopg2-binary/) (per la connettività a PostgreSQL) e [cryptography](https://pypi.org/project/cryptography/) (per le operazioni di hash e firma, quali la generazione di chiavi e la sottoscrizione di dati).
+
+Questa PoC è stata creata e testata su un sistema operativo macOS 15.5 (Apple M1 Max), con Python 3.12.6 e Podman 5.4.2. Tuttavia, dovrebbe funzionare senza problemi su qualsiasi sistema operativo moderno che supporti Python e Podman (o Docker). Si raccomanda di verificare la compatibilità delle versioni dei pacchetti Python con la propria installazione di Python, in quanto potrebbero esserci lievi differenze tra le versioni.
 
 Una volta verificata la presenza di tutti i requisiti, procedere con l'installazione delle dipendenze Python usando il seguente comando:
 
@@ -375,7 +377,7 @@ Questo comando esegue una serie di operazioni automatizzate in background:
 
 ### 4. Esecuzione dello Script di firma e verifica
 
-Lo script `main.py` costituisce il nucleo della Proof of Concept e simula due scenari distinti, al fine di illustrare il funzionamento della Signature Chain in condizioni ideali e in presenza di tentativi di manomissione. Tale dimostrazione evidenzia la robustezza e la resilienza della catena:
+Lo script `main.py` costituisce il nucleo della Proof of Concept e simula due scenari distinti, al fine di illustrare il funzionamento della Signature Chain in condizioni ideali e in presenza di tentativi di manomissione. Tale dimostrazione mette in luce la solidità e la capacità della catena di mantenere l’integrità dei dati.
 
 1. **Scenario utente applicativo (app_user)**:  
    * Lo script stabilisce una connessione al database utilizzando l'utente `app_user`, il quale, come precedentemente configurato, detiene permessi limitati (esclusivamente lettura e inserimento).  
@@ -391,7 +393,7 @@ Lo script `main.py` costituisce il nucleo della Proof of Concept e simula due sc
    * Tuttavia, in questo scenario, viene tentata (e riuscita) una manomissione di un record esistente, ad esempio alterando l'hash di un documento o una firma. Questo è possibile poiché il superutente detiene privilegi che consentono di bypassare le policy RLS (o, più precisamente, le policy RLS non sono state configurate per bloccare l'azione del superutente stesso).  
    * Infine, viene eseguita un'ultima verifica della catena, la quale, in questo caso, **dovrebbe fallire**, generando un messaggio di errore che evidenzia chiaramente la manomissione. Questo momento costituisce il punto culminante della dimostrazione, in quanto illustra l'efficacia del meccanismo di verifica della catena nel rilevare alterazioni, anche se perpetrate da un utente con accesso diretto e privilegi elevati al database.
 
-Per avviare l'esecuzione dello script, utilizzare il seguente comando nella console:
+Per avviare l'esecuzione dello script, utilizzare il seguente comando dal terminale:
 
 ```bash
 python main.py
@@ -405,7 +407,7 @@ La verifica della catena è essenziale. Vediamo i passaggi per verificare l'inte
 
 **Figura 3**: Processo di verifica semplificato della catena di firme
 
-Scendendo nel dettaglio implementativo, la funzione `verify_chain` all'interno dello script è incaricata di eseguire un'analisi forense per accertare l'integrità della catena. Tale processo è meticoloso e garantisce la perfezione di ogni anello della catena, prevenendo qualsiasi tentativo di frode. Di seguito è illustrato il suo funzionamento, passo dopo passo, tramite un diagramma di sequenza che delinea le interazioni tra i vari componenti.
+Scendendo nel dettaglio implementativo, la funzione `verify_chain` all'interno dello script è incaricata di eseguire un'analisi forense per accertare l'integrità della catena. Tale processo è meticoloso e garantisce la perfezione di ogni anello della catena, prevenendo qualsiasi tentativo di manomissione. Di seguito è illustrato il suo funzionamento, passo dopo passo, tramite un diagramma di sequenza che delinea le interazioni tra i vari componenti.
 
 ```mermaid
 sequenceDiagram
@@ -452,50 +454,143 @@ In sintesi, il processo di verifica si articola come segue:
    2. Si ricostruiscono i dati che sono stati originariamente firmati per quel blocco, ovvero la concatenazione dell'hash del blocco precedente e dell'hash del documento. Questi sono i dati esatti su cui la firma è stata calcolata.
    3. Si verifica la signature di quel blocco utilizzando i dati ricostruiti e la chiave pubblica del firmatario. Tale verifica accerta l'autenticità della firma e l'inalterabilità dei dati su cui essa è stata apposta.
 
-3. Qualora una qualsiasi di queste verifiche fallisca (ad esempio, una firma non è valida o un `prev_hash` non coincide), l'intera catena viene considerata compromessa e non affidabile. Questo meccanismo intrinseco garantisce l'integrità e l'immutabilità: la catena agisce come un sistema di **"auto-riparazione"** in grado di rilevare immediatamente le alterazioni.
+3. Qualora una qualsiasi di queste verifiche fallisca (ad esempio, una firma non è valida o un `prev_hash` non coincide), l'intera catena viene considerata compromessa e non affidabile. Questo meccanismo di verifica intrinseca non ripristina lo stato originale, ma piuttosto garantisce l'integrità e l'immutabilità attraverso la sua capacità di **rilevare immediatamente qualsiasi alterazione o manomissione**.
 
 ### Output atteso (estratto)
 
-L'esecuzione dello script genererà un output nella console, formattato con colori ed emoji per una chiara indicazione dello stato delle operazioni. Tale output è concepito come un report in tempo reale, di facile interpretabilità. Di seguito è presentato un estratto esemplificativo dell'output, con i messaggi chiave che guidano l'utente attraverso la dimostrazione:
+L'esecuzione dello script genererà un output in console, formattato con colori ed emoji per una chiara indicazione dello stato delle operazioni. Tale output è concepito come un report in tempo reale, di facile interpretabilità. Di seguito è presentato un estratto esemplificativo dell'output, con i messaggi chiave che guidano l'utente attraverso la dimostrazione.
 
 ```plain
-💾 Tentativo di pulire la tabella signature_chain come utente 'postgres'...  
+💾 Tentativo di pulire la tabella signature_chain come utente 'postgres'...
 ✅ Tabella signature_chain pulita con successo.
 
-\===== SCENARIO 1: Utente Applicativo (app_user) \=====  
-💾 Tentativo di connessione al database 'signature_demo' come utente 'app_user'...  
+===== SCENARIO 1: Utente Applicativo (app_user) =====
+💾 Tentativo di connessione al database 'signature_demo' come utente 'app_user'...
 ✅ Connessione come app_user riuscita.
 
-🔗==== Sequenza Firme Inserite nella Catena \====  
-ℹ️ Documento Originale: "Contenuto documento firmato da più persone"  
-ℹ️ Hash Documento Originale: \<hash_del_documento\>  
-\----------------------------------------------------------------------  
-🧱 ID Blocco: 1  
-  Firmatario: Antonio  
-  Hash Documento Firmato: \<hash_del_documento\>  
-  Hash Catena Precedente: N/A (Blocco Genesi)  
-  Hash Catena Corrente (Firma del Blocco): \<signature_blocco_1\>...  
-\----------------------------------------------------------------------  
-🧱 ID Blocco: 2  
-  Firmatario: Marianna  
-  Hash Documento Firmato: \<hash_del_documento\>  
-  Hash Catena Precedente: \<signature_blocco_1\>  
-  Hash Catena Corrente (Firma del Blocco): \<signature_blocco_2\>...  
-\----------------------------------------------------------------------  
-... (altre firme e output di verifica) ...
+🔗==== Sequenza Firme Inserite nella Catena ====
+Documento Originale: "Contenuto documento firmato da più persone"
+Hash Documento Originale: <hash_del_documento>
+----------------------------------------------------------------------
+🧱 ID Blocco: 1
+  Firmatario: Antonio
+  Hash Documento Firmato: <hash_documento>
+  Hash Catena Precedente: N/A (Blocco Genesi)
+  Hash Catena Corrente (Firma del Blocco): <signature_blocco_1>
+----------------------------------------------------------------------
+🧱 ID Blocco: 2
+  Firmatario: Marianna
+  Hash Documento Firmato: <hash_documento>
+  Hash Catena Precedente: <signature_blocco_1>
+  Hash Catena Corrente (Firma del Blocco): <signature_blocco_2>
+----------------------------------------------------------------------
+🧱 ID Blocco: 3
+  Firmatario: Claudio
+  Hash Documento Firmato: <hash_documento>
+  Hash Catena Precedente: <signature_blocco_2>
+  Hash Catena Corrente (Firma del Blocco): <signature_blocco_3>
+----------------------------------------------------------------------
 
-🔗==== Verifica Integrità Catena Firme (Contesto: app_user - Post Inserimento) \====  
-...  
-✅ La catena delle firme è VALIDA. Integrità CONFERMATA. ✅  
-\----------------------------------------------------------------------
+🔗==== Verifica Integrità Catena Firme (Contesto: app_user - Post Inserimento) ====
 
-⚠️---- 1.2 Tentativo di Manomissione UPDATE (come app_user) \----  
-ℹ️ Tentativo di UPDATE del document_hash del blocco ID: 2 (Firmatario: Marianna) come 'app_user'.  
-✅ SUCCESSO: Tentativo di UPDATE BLOCCATO dal DB per 'app_user' come previsto\!  
-  ℹ️ Errore DB (SQLSTATE 42501): permission denied for table signature_chain  
-... (output scenario superuser con manomissione e fallimento verifica crittografica) ...
+Verifica Blocco ID: 1 (Firmatario: Antonio)
+  ✅ OK: La firma del blocco 1 è valida.
 
-🏁Fine della dimostrazione.
+Verifica Blocco ID: 2 (Firmatario: Marianna)
+  ✅ OK: prev_hash ('1fc60457d3...') corrisponde alla signature del blocco precedente.
+  ✅ OK: La firma del blocco 2 è valida.
+
+Verifica Blocco ID: 3 (Firmatario: Claudio)
+  ✅ OK: prev_hash ('456921f9d9...') corrisponde alla signature del blocco precedente.
+  ✅ OK: La firma del blocco 3 è valida.
+----------------------------------------------------------------------
+✅ RISULTATO VERIFICA (app_user - Post Inserimento): L'intera catena di firme è VALIDA.
+----------------------------------------------------------------------
+
+🔨---- 1.2 Tentativo di Manomissione UPDATE (come app_user) ----
+ℹ️ Tentativo di UPDATE del document_hash del blocco ID: 2 (Firmatario: Marianna) come 'app_user'.
+✅ SUCCESSO: Tentativo di UPDATE BLOCCATO dal DB per 'app_user' come previsto!
+  Errore DB (SQLSTATE 42501): ERROR:  permission denied for table signature_chain
+
+🔗==== Verifica Integrità Catena Firme (Contesto: app_user - Post Tentativo UPDATE Bloccato) ====
+
+Verifica Blocco ID: 1 (Firmatario: Antonio)
+  ✅ OK: La firma del blocco 1 è valida.
+  
+Verifica Blocco ID: 2 (Firmatario: Marianna)
+  ✅ OK: prev_hash ('1fc60457d3...') corrisponde alla signature del blocco precedente.
+  ✅ OK: La firma del blocco 2 è valida.
+...
+----------------------------------------------------------------------
+✅ RISULTATO VERIFICA (app_user - Post Tentativo UPDATE Bloccato): L'intera catena di firme è VALIDA.
+----------------------------------------------------------------------
+
+💾 Connessione 'app_user' chiusa.
+
+===== SCENARIO 2: Utente Privilegiato (postgres) =====
+
+💾 Tentativo di pulire la tabella signature_chain come utente 'postgres'...
+✅ Tabella signature_chain pulita con successo.
+💾 Tentativo di connessione al database 'signature_demo' come utente 'postgres'...
+✅ Connessione come 'postgres' riuscita.
+
+🔗==== Sequenza Firme Inserite nella Catena ====
+Documento Originale: "Contenuto documento firmato da più persone"
+Hash Documento Originale: <hash_del_documento>
+----------------------------------------------------------------------
+🧱 ID Blocco: 4
+  Firmatario: Antonio
+  Hash Documento Firmato: <hash_del_documento>
+  Hash Catena Precedente: N/A (Blocco Genesi)
+  Hash Catena Corrente (Firma del Blocco): <signature_blocco_4>
+----------------------------------------------------------------------
+🧱 ID Blocco: 5
+  Firmatario: Marianna
+  Hash Documento Firmato: <hash_del_documento>
+  Hash Catena Precedente: <signature_blocco_4>
+  Hash Catena Corrente (Firma del Blocco): <signature_blocco_5>
+----------------------------------------------------------------------
+🧱 ID Blocco: 6
+  Firmatario: Claudio
+  Hash Documento Firmato: <hash_del_documento>
+  Hash Catena Precedente: <signature_blocco_5>
+  Hash Catena Corrente (Firma del Blocco): <signature_blocco_6>
+----------------------------------------------------------------------
+
+🔗==== Verifica Integrità Catena Firme (Contesto: postgres - Post Inserimento) ====
+
+Verifica Blocco ID: 4 (Firmatario: Antonio)
+  ✅ OK: La firma del blocco 4 è valida.
+
+Verifica Blocco ID: 5 (Firmatario: Marianna)
+  ✅ OK: prev_hash ('1fc60457d3...') corrisponde alla signature del blocco precedente.
+  ✅ OK: La firma del blocco 5 è valida.
+...
+----------------------------------------------------------------------
+✅ RISULTATO VERIFICA (postgres - Post Inserimento): L'intera catena di firme è VALIDA.
+----------------------------------------------------------------------
+
+🔨---- 2.2 Manomissione UPDATE (come postgres) ---- (⚠️)
+ℹ️ Esecuzione UPDATE del document_hash del blocco ID: 6 (Firmatario: Claudio) come 'postgres'.
+✅ Manomissione UPDATE (come postgres) effettuata con successo a livello DB.
+
+🔗==== Verifica Integrità Catena Firme (Contesto: postgres - Post Manomissione DB) ====
+
+Verifica Blocco ID: 4 (Firmatario: Antonio)
+  ✅ OK: La firma del blocco 4 è valida.
+
+  ...
+
+Verifica Blocco ID: 6 (Firmatario: Claudio)
+  ✅ OK: prev_hash ('456921f9d9...') corrisponde alla signature del blocco precedente.
+  ❌ ERRORE: La firma del blocco 5 NON è valida (possibile manomissione di document_hash o prev_hash).
+----------------------------------------------------------------------
+❌ RISULTATO VERIFICA (postgres - Post Manomissione DB): L'intera catena di firme NON È VALIDA. Controllare gli errori sopra.
+----------------------------------------------------------------------
+
+💾 Connessione 'postgres' chiusa.
+
+Fine della dimostrazione.
 ```
 
 Questo output guida l'utente attraverso le fasi della dimostrazione, evidenziando i successi (✅) e i fallimenti (⚠️) in modo chiaro. Si osserverà come il database blocchi i tentativi di manomissione da parte dell'utente con permessi limitati (grazie alla RLS!), e come il meccanismo di verifica della catena rilevi le alterazioni qualora un superutente riesca a modificarla (poiché la crittografia, per sua natura, non ammette falsificazioni!).
@@ -509,7 +604,7 @@ In questa sezione finale, si forniscono ulteriori dettagli tecnici e considerazi
 Nell'ambito della presente Proof of Concept (PoC), sono stati impiegati algoritmi crittografici che costituiscono gli strumenti fondamentali per la sicurezza digitale. Essi rappresentano la base su cui è edificata l'intera architettura di fiducia della Signature Chain. Nello specifico, sono stati utilizzati:
 
 * **Algoritmo di hash:** SHA-256. Questo algoritmo funziona come una funzione di hash crittografica unidirezionale, che prende in input dati di qualsiasi dimensione (un documento, una frase, un'immagine, un video, qualsiasi sequenza di bit) e produce in output un codice alfanumerico univoco di 256 bit. Tale output, noto come "digest" o "impronta digitale", ha una lunghezza fissa. Una caratteristica fondamentale è che anche la minima modifica (un singolo bit, una virgola, uno spazio) nel dato originale comporterebbe una variazione *completa* e imprevedibile dell'hash. La sua utilità è preminente nella verifica dell'integrità: qualora l'hash calcolato non corrisponda all'hash memorizzato, si ha la certezza che il dato è stato alterato, anche in modo impercettibile.  
-* **Algoritmo di firma digitale:** RSA con chiavi a 2048 bit (con "padding" PKCS1v15). RSA è un algoritmo di crittografia a chiave pubblica ampiamente riconosciuto e diffusamente impiegato a livello globale per la sicurezza delle comunicazioni e delle firme digitali. Il suo funzionamento si basa su una coppia di chiavi: una chiave privata (che deve essere mantenuta segreta dal firmatario, agendo come un sigillo personale unico) e una chiave pubblica (che può essere liberamente distribuita, fungendo da strumento di verifica per chiunque). Quando un documento viene firmato, la chiave privata del firmatario è utilizzata per "sigillare" crittograficamente i dati. Successivamente, chiunque può verificare l'autenticità di tale firma utilizzando la chiave pubblica corrispondente. Le chiavi RSA a 2048 bit sono attualmente considerate sufficientemente sicure per la maggior parte delle applicazioni, sebbene per scenari futuri si debbano considerare ulteriori evoluzioni.
+* **Algoritmo di firma digitale:** RSA con chiavi a 2048 bit. RSA è un algoritmo di crittografia a chiave pubblica ampiamente riconosciuto e diffusamente impiegato a livello globale per la sicurezza delle comunicazioni e delle firme digitali. Il suo funzionamento si basa su una coppia di chiavi: una chiave privata (che deve essere mantenuta segreta dal firmatario, agendo come un sigillo personale unico) e una chiave pubblica (che può essere liberamente distribuita, fungendo da strumento di verifica per chiunque). Quando un documento viene firmato, la chiave privata del firmatario è utilizzata per "sigillare" crittograficamente i dati. Successivamente, chiunque può verificare l'autenticità di tale firma utilizzando la chiave pubblica corrispondente. Le chiavi RSA a 2048 bit sono attualmente considerate sufficientemente sicure per la maggior parte delle applicazioni, sebbene per scenari futuri si debbano considerare ulteriori evoluzioni.
 
 Tali scelte algoritmiche sono robuste e adatte a una vasta gamma di applicazioni, rappresentando uno standard consolidato nel settore. Tuttavia, in funzione di requisiti specifici di sicurezza, prestazioni o longevità del sistema (ad esempio, se la validità dei dati deve estendersi per decenni, o se il sistema deve elaborare milioni di firme al secondo, come nel caso di istituzioni finanziarie o enti governativi), potrebbe essere necessario considerare algoritmi più avanzati o alternativi.
 
@@ -544,7 +639,7 @@ In conclusione, la scelta degli algoritmi crittografici rappresenta una decision
 
 ### Le Blockchain Tables in Oracle Database 21c - Un'innovazione pertinente per l'implementazione della Signature Chain
 
-Un'innovazione tecnologica di rilievo, introdotta con Oracle Database 21c, è rappresentata dalle **Blockchain Tables**. Questa tipologia di tabella specializzata offre un'opzione di persistenza altamente resistente alla manomissione direttamente all'interno del database Oracle, estendendone l'architettura convergente multi-modello. La loro disponibilità generale è stata confermata con il rilascio di Oracle Database 21c per i servizi cloud (Virtual Machine e Bare Metal) e, successivamente, per le piattaforme on-premise (incluso Exadata, Linux e Windows) con l'aggiornamento 19.10 Release Update (RU) per Oracle Database 19c.
+Un'innovazione tecnologica di rilievo, introdotta con Oracle Database 21c, è rappresentata dalle **[Blockchain Tables](https://docs.oracle.com/en/database/oracle/oracle-database/19/admin/managing-tables.html#GUID-E7151628-AF04-48D4-9CB4-F72417AFC391)**. Questa tipologia di tabella specializzata offre un'opzione di persistenza altamente resistente alla manomissione direttamente all'interno del database Oracle, estendendone l'architettura convergente multi-modello. La loro disponibilità generale è stata confermata con il rilascio di Oracle Database 21c per i servizi cloud (Virtual Machine e Bare Metal) e, successivamente, per le piattaforme on-premise (incluso Exadata, Linux e Windows) con l'aggiornamento 19.10 Release Update (RU) per Oracle Database 19c.
 
 **Principi Operativi delle Blockchain Tables:**
 
@@ -566,3 +661,42 @@ La Signature Chain, potente soluzione per autenticità, integrità e sequenziali
 La Proof of Concept, seppur semplificata con chiavi RSA generate in memoria, dimostra il potenziale di questa tecnologia in scenari reali. L’integrazione con HSM, key vault, Timestamp Authority e certificati digitali qualificati eleva ulteriormente la sicurezza, rendendo la Signature Chain essenziale per sistemi ad alta affidabilità e conformi alle normative.
 
 In un panorama digitale in cui la sicurezza dei dati è fondamentale, la Signature Chain costruisce fiducia e trasparenza nei flussi di lavoro documentali. La sua traccia di audit crittograficamente sicura la rende indispensabile in settori come finanza, pubblica amministrazione, sanità e gestione legale. La ricerca sulla resistenza quantistica garantirà la longevità di queste soluzioni. La Signature Chain è una tecnologia di impatto, destinata a consolidare la sicurezza e l’affidabilità nel mondo digitale.
+
+## Riferimenti utili
+
+Per approfondire i concetti e le tecnologie trattate in questo articolo, si consiglia la consultazione delle seguenti risorse:
+
+1. **NIST FIPS PUB 186-5: Digital Signature Standard (DSS)**
+    * Descrizione: Specifica gli algoritmi approvati per la generazione e la verifica delle firme digitali, inclusi RSA ed ECDSA.
+    * Fonte: National Institute of Standards and Technology (NIST)
+    * Link: [https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf)
+
+2. **NIST FIPS PUB 180-4: Secure Hash Standard (SHS)**
+    * Descrizione: Definisce gli algoritmi di hash sicuri approvati, come SHA-256 e SHA-512.
+    * Fonte: National Institute of Standards and Technology (NIST)
+    * Link: [https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf)
+
+3. **RFC 3161: Internet X.509 Public Key Infrastructure Time-Stamp Protocol (TSP)**
+    * Descrizione: Specifica un protocollo per la creazione di marche temporali digitali affidabili, essenziali per attestare l'esistenza di dati in un determinato momento.
+    * Fonte: Internet Engineering Task Force (IETF)
+    * Link: [https://datatracker.ietf.org/doc/html/rfc3161](https://datatracker.ietf.org/doc/html/rfc3161)
+
+4. **Regolamento (UE) n. 910/2014 (eIDAS)**
+    * Descrizione: Regolamento europeo sull'identificazione elettronica e i servizi fiduciari per le transazioni elettroniche nel mercato interno, che include le firme elettroniche qualificate.
+    * Fonte: Unione Europea
+    * Link: [https://eur-lex.europa.eu/legal-content/IT/TXT/?uri=CELEX%3A32014R0910](https://eur-lex.europa.eu/legal-content/IT/TXT/?uri=CELEX%3A32014R0910)
+
+5. **Menezes, A. J., van Oorschot, P. C., & Vanstone, S. A. (1996). *Handbook of Applied Cryptography*. CRC Press.**
+    * Descrizione: Un testo di riferimento completo sulla crittografia applicata, che copre in dettaglio firme digitali, funzioni di hash e infrastrutture a chiave pubblica.
+    * Link: [http://cacr.uwaterloo.ca/hac/](http://cacr.uwaterloo.ca/hac/) (Sito ufficiale con capitoli disponibili gratuitamente)
+
+6. **Nakamoto, S. (2008). *Bitcoin: A Peer-to-Peer Electronic Cash System*.**
+    * Descrizione: Sebbene focalizzato su una criptovaluta, questo whitepaper ha introdotto il concetto di una catena di blocchi crittografamente collegati (blockchain), che condivide principi fondamentali con l'idea di una catena di hash per garantire l'integrità sequenziale.
+    * Link: [https://bitcoin.org/bitcoin.pdf](https://bitcoin.org/bitcoin.pdf)
+
+7. **Oracle Database Documentation: Blockchain Tables**
+    * Descrizione: Documentazione ufficiale di Oracle sulle Blockchain Tables, che illustra come questa funzionalità del database può essere utilizzata per creare tabelle resistenti alla manomissione.
+    * Fonte: Oracle Corporation
+    * Link: <https://docs.oracle.com/en/database/oracle/oracle-database/19/admin/managing-tables.html#GUID-E7151628-AF04-48D4-9CB4-F72417AFC391> (Per Oracle 21c, link simili esistono per la 19c)
+
+Questi riferimenti forniscono una base solida per comprendere gli aspetti teorici e pratici della crittografia, delle firme digitali e delle tecnologie correlate che sono alla base del concetto di Signature Chain.
