@@ -2,26 +2,28 @@
 title: "La Signature Chain: Garanzia di Autenticità, Integrità e Sequenzialità nei Documenti Digitali"
 summary: "Scopri come la Signature Chain garantisce autenticità, integrità e sequenzialità nei documenti digitali, con un esempio pratico di Proof of Concept."
 author: "Antonio Musarra"
-create-date: "2025-05-23"
+create-date: "2025-05-17"
 categories: ["Tecnologia", "Sicurezza Informatica"]
 tags: ["Signature Chain", "Digital Signatures", "Cryptography", "PostgreSQL", "Python"]
 image: ""
-date: "2025-05-26"
+date: "2025-05-25"
 status: "published"
 layout: "article"
 slug: "signature-chain-garanzia-autenticita-integrita-sequenzialita-documenti-digitali"
 permalink: ""
 lang: "it"
-version: "1.0.0"
+version: "1.1.1"
 scope: "Public"
 state: Release
 ---
 
 ## Cronologia delle revisioni
 
-| Versione | Data       | Autore          | Descrizione delle Modifiche        |
-| :------- | :--------- | :-------------- | :--------------------------------- |
-| 1.0.0    | 2025-05-26 | Antonio Musarra | Prima pubblicazione dell'articolo. |
+| Versione | Data       | Autore          | Descrizione delle Modifiche                |
+| :------- | :--------- | :-------------- | :----------------------------------------- |
+| 1.0.0    | 2025-05-17 | Antonio Musarra | Primo rilascio                             |
+| 1.1.0    | 2025-05-24 | Antonio Musarra | Aggiunto il capitolo Appendice             |
+| 1.1.1    | 2025-05-25 | Antonio Musarra | Correzioni di typo error e semplificazione |
 
 [TOC]
 
