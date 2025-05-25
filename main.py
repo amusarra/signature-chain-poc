@@ -41,15 +41,18 @@ def generate_keys():
                (pem_private, pem_public)
     """
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    
     pem_private = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.TraditionalOpenSSL,
         encryption_algorithm=serialization.NoEncryption()
     )
+    
     pem_public = private_key.public_key().public_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PublicFormat.SubjectPublicKeyInfo
     )
+    
     return pem_private, pem_public
 
 
@@ -78,11 +81,13 @@ def sign_data(data: bytes, private_key_pem: bytes) -> str:
         str: La firma digitale come stringa esadecimale.
     """
     private_key = serialization.load_pem_private_key(private_key_pem, password=None)
+    
     signature = private_key.sign(
         data,
         padding.PKCS1v15(),
         hashes.SHA256()
     )
+    
     return signature.hex()
 
 
@@ -99,6 +104,7 @@ def verify_signature(data: bytes, signature_hex: str, public_key_pem: bytes) -> 
         bool: True se la firma è valida, False altrimenti.
     """
     public_key = serialization.load_pem_public_key(public_key_pem)
+    
     try:
         signature_bytes = bytes.fromhex(signature_hex)
         public_key.verify(
@@ -115,7 +121,8 @@ def verify_signature(data: bytes, signature_hex: str, public_key_pem: bytes) -> 
         return False
 
 
-def insert_signature_chain(document: bytes, signer: str, conn, private_key_pem: bytes, is_first_call: bool, original_doc_content: str):
+def insert_signature_chain(document: bytes, signer: str, conn, private_key_pem: bytes, is_first_call: bool, 
+                           original_doc_content: str):
     """
     Crea un nuovo blocco nella catena di firme e lo inserisce nel database.
 
@@ -163,7 +170,7 @@ def insert_signature_chain(document: bytes, signer: str, conn, private_key_pem: 
     print(f"  {Colors.OKBLUE}Firmatario: {signer}{Colors.ENDC}")
     print(f"  {Colors.OKBLUE}Hash Documento Firmato: {document_hash}{Colors.ENDC}")
     print(f"  {Colors.OKBLUE}Hash Catena Precedente: {prev_hash if prev_hash else 'N/A (Blocco Genesi)'}{Colors.ENDC}")
-    print(f"  {Colors.OKBLUE}Hash Catena Corrente (Firma del Blocco): {signature[:64]}...{Colors.ENDC}") # Tronca per leggibilità
+    print(f"  {Colors.OKBLUE}Hash Catena Corrente (Firma del Blocco): {signature[:64]}...{Colors.ENDC}")
     print(Colors.OKCYAN + "-" * 70 + Colors.ENDC)
 
 
@@ -187,6 +194,7 @@ def verify_chain(conn, firmatari_data: dict, user_context: str = ""):
         bool: True se l'intera catena è valida, False altrimenti.
     """
     print(f"\n{Colors.HEADER}{EMOJI_CHAIN}==== Verifica Integrità Catena Firme (Contesto: {user_context}) ===={Colors.ENDC}")
+    
     cursor = conn.cursor()
     cursor.execute("SELECT id, signer, document_hash, prev_hash, signature FROM signature_chain ORDER BY id ASC")
     records = cursor.fetchall()
@@ -200,6 +208,7 @@ def verify_chain(conn, firmatari_data: dict, user_context: str = ""):
 
     for i, row_data in enumerate(records):
         record_id, signer_name, doc_hash_stored, prev_hash_stored, current_signature_stored = row_data
+        
         print(f"\n{Colors.OKCYAN}Verifica Blocco ID: {record_id} (Firmatario: {signer_name}){Colors.ENDC}")
 
         if i == 0: 
@@ -214,6 +223,7 @@ def verify_chain(conn, firmatari_data: dict, user_context: str = ""):
                 print(f"  {Colors.OKGREEN}{EMOJI_SUCCESS} OK: prev_hash ('{prev_hash_stored[:10]}...') corrisponde alla signature del blocco precedente.{Colors.ENDC}")
 
         public_key_pem = firmatari_data.get(signer_name)
+        
         if not public_key_pem:
             print(f"  {Colors.FAIL}{EMOJI_FAIL} ERRORE: Chiave pubblica {EMOJI_KEY} non trovata per il firmatario '{signer_name}'. Impossibile verificare la firma del blocco {record_id}.{Colors.ENDC}")
             is_chain_valid = False
@@ -232,11 +242,14 @@ def verify_chain(conn, firmatari_data: dict, user_context: str = ""):
 
     cursor.close()
     print(Colors.HEADER + "-" * 70 + Colors.ENDC)
+    
     if is_chain_valid:
         print(f"{Colors.OKGREEN}{EMOJI_SUCCESS} RISULTATO VERIFICA ({user_context}): L'intera catena di firme è VALIDA.{Colors.ENDC}")
     else:
         print(f"{Colors.FAIL}{EMOJI_FAIL} RISULTATO VERIFICA ({user_context}): L'intera catena di firme NON È VALIDA. Controllare gli errori sopra.{Colors.ENDC}")
+    
     print(Colors.HEADER + "-" * 70 + Colors.ENDC)
+    
     return is_chain_valid
 
 def clear_signature_table(db_name_param, super_user_param, super_password_param, db_host_param):
@@ -251,6 +264,7 @@ def clear_signature_table(db_name_param, super_user_param, super_password_param,
         db_host_param (str): Host del database.
     """
     conn_super_clear = None
+    
     try:
         print(f"\n{Colors.WARNING}{EMOJI_DB} Tentativo di pulire la tabella signature_chain come utente '{super_user_param}'...{Colors.ENDC}")
         conn_super_clear = psycopg2.connect(dbname=db_name_param, user=super_user_param, password=super_password_param, host=db_host_param)
@@ -280,18 +294,24 @@ if __name__ == "__main__":
 
     firmatari_list = []
     nomi_firmatari = ["Antonio", "Marianna", "Claudio"]
+    
     for nome in nomi_firmatari:
         priv_key, pub_key = generate_keys()
         firmatari_list.append({"nome": nome, "priv": priv_key, "pub": pub_key})
+        
     firmatari_pub_keys = {f["nome"]: f["pub"] for f in firmatari_list}
 
     clear_signature_table(db_name, super_db_user, super_db_password, db_host)
 
     print(f"\n{Colors.BOLD}{Colors.HEADER}===== SCENARIO 1: Utente Applicativo ({app_db_user}) ====={Colors.ENDC}")
+    
     conn_app = None
+    
     try:
         print(f"{EMOJI_DB} Tentativo di connessione al database '{db_name}' come utente '{Colors.OKBLUE}{app_db_user}{Colors.ENDC}'...")
+        
         conn_app = psycopg2.connect(dbname=db_name, user=app_db_user, password=app_db_password, host=db_host)
+        
         print(f"{Colors.OKGREEN}{EMOJI_SUCCESS} Connessione come {app_db_user} riuscita.{Colors.ENDC}")
 
         for i, firmatario_info in enumerate(firmatari_list):
@@ -300,6 +320,7 @@ if __name__ == "__main__":
         verify_chain(conn_app, firmatari_pub_keys, f"{app_db_user} - Post Inserimento")
 
         print(f"\n{Colors.WARNING}{EMOJI_TAMPER}---- 1.2 Tentativo di Manomissione UPDATE (come {app_db_user}) ----{Colors.ENDC}")
+        
         if len(firmatari_list) > 1:
             target_signer_app = firmatari_list[1]["nome"]
             tampered_block_id_app = None
@@ -339,7 +360,9 @@ if __name__ == "__main__":
             print(f"\n{EMOJI_DB} Connessione '{app_db_user}' chiusa.")
 
     print(f"\n{Colors.BOLD}{Colors.HEADER}===== SCENARIO 2: Utente Privilegiato ({super_db_user}) ====={Colors.ENDC}")
+    
     conn_super_scenario = None
+    
     try:
         clear_signature_table(db_name, super_db_user, super_db_password, db_host)
         
@@ -353,6 +376,7 @@ if __name__ == "__main__":
         verify_chain(conn_super_scenario, firmatari_pub_keys, f"{super_db_user} - Post Inserimento")
 
         print(f"\n{Colors.WARNING}{EMOJI_TAMPER}---- 2.2 Manomissione UPDATE (come {super_db_user}) ----{Colors.ENDC}")
+        
         if len(firmatari_list) > 1:
             target_signer_super = firmatari_list[1]["nome"]
             tampered_block_id_super = None
