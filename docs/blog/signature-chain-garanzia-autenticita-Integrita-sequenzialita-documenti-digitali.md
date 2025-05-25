@@ -699,5 +699,9 @@ Per approfondire i concetti e le tecnologie trattate in questo articolo, si cons
     * Descrizione: Documentazione ufficiale di Oracle sulle Blockchain Tables, che illustra come questa funzionalità del database può essere utilizzata per creare tabelle resistenti alla manomissione.
     * Fonte: Oracle Corporation
     * Link: <https://docs.oracle.com/en/database/oracle/oracle-database/19/admin/managing-tables.html#GUID-E7151628-AF04-48D4-9CB4-F72417AFC391> (Per Oracle 21c, link simili esistono per la 19c)
+8. **Prevent and Detect Fraud with Immutable and Blockchain Tables on Oracle Autonomous Database**
+    * Descrizione: Un workshop che illustra come queste tecnologie utilizzino la firma crittografica, la generazione di digest e la verifica per preservare l'affidabilità e supportare l'audit. Nelle Blockchain Tables, ogni riga è concatenata crittograficamente a quella precedente, creando una cronologia dei record sicura e tracciabile. La funzione digest acquisisce snapshot periodici dello stato della tabella, che possono essere verificati in modo indipendente per rilevare manomissioni o anomalie. Attraverso esercitazioni pratiche, imparerai come queste funzionalità supportano la conformità, il rilevamento delle frodi e la registrazione sicura delle transazioni. Entrambe le funzionalità sono disponibili in Oracle Database 19c, 21c e 23ai.
+    * Fonte: Oracle Corporation
+    * Link: [https://apexapps.oracle.com/pls/apex/r/dbpm/livelabs/view-workshop?wid=4142&clear=RR,180&session=14337417277670](https://apexapps.oracle.com/pls/apex/r/dbpm/livelabs/view-workshop?wid=4142&clear=RR,180&session=14337417277670)
 
 Questi riferimenti forniscono una base solida per comprendere gli aspetti teorici e pratici della crittografia, delle firme digitali e delle tecnologie correlate che sono alla base del concetto di Signature Chain.
