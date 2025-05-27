@@ -19,6 +19,8 @@ db_host = os.environ.get("DB_HOST", "localhost")
 db_operation_lock = threading.Lock()
 
 # --- Funzioni Crittografiche (semplificate/adattate da main.py) ---
+
+
 def generate_keys_for_simulation():
     private_key = rsa.generate_private_key(
         public_exponent=65537, key_size=2048)
@@ -30,7 +32,8 @@ def generate_keys_for_simulation():
     # pem_public = public_key.public_bytes(
     #     encoding=serialization.Encoding.PEM,
     #     format=serialization.PublicFormat.SubjectPublicKeyInfo)
-    return pem_private, None # Restituiamo None per la chiave pubblica non usata
+    return pem_private, None  # Restituiamo None per la chiave pubblica non usata
+
 
 def sign_data_for_simulation(private_key_pem, data_to_sign):
     private_key = serialization.load_pem_private_key(
@@ -41,10 +44,12 @@ def sign_data_for_simulation(private_key_pem, data_to_sign):
         hashes.SHA256())
     return signature_bytes.hex()
 
+
 def get_document_hash(document_content):
     return hashlib.sha256(document_content.encode()).hexdigest()
 
 # --- Funzioni di Interazione con il DB per la Simulazione ---
+
 
 def clear_table(conn):
     with conn.cursor() as cursor:
@@ -53,6 +58,7 @@ def clear_table(conn):
     print("Tabella signature_chain pulita.")
 
 # get_last_signature_for_doc non è più usata direttamente dai thread se il lock protegge la lettura
+
 
 def insert_genesis_block(conn, document_id_param, signer_name, doc_hash, signature_param):
     with conn.cursor() as cursor:
@@ -65,8 +71,10 @@ def insert_genesis_block(conn, document_id_param, signer_name, doc_hash, signatu
         )
         block_id = cursor.fetchone()[0]
     conn.commit()
-    print(f"Blocco Genesi inserito per doc {document_id_param} da {signer_name}, ID: {block_id}, Signature: {signature_param[:10]}...")
+    print(
+        f"Blocco Genesi inserito per doc {document_id_param} da {signer_name}, ID: {block_id}, Signature: {signature_param[:10]}...")
     return block_id
+
 
 def concurrent_insert_signature(
         document_id_param,
@@ -80,8 +88,9 @@ def concurrent_insert_signature(
     """
     conn_thread = None
     try:
-        conn_thread = psycopg2.connect(dbname=db_name, user=db_user, password=db_password, host=db_host)
-        conn_thread.autocommit = False # Controllo manuale della transazione
+        conn_thread = psycopg2.connect(
+            dbname=db_name, user=db_user, password=db_password, host=db_host)
+        conn_thread.autocommit = False  # Controllo manuale della transazione
 
         doc_hash = get_document_hash(document_content)
 
@@ -103,15 +112,17 @@ def concurrent_insert_signature(
                 result = cur_select.fetchone()
                 prev_hash = result[0] if result else None
 
-            print(f"[{thread_name}] Letto prev_hash: {prev_hash[:10] if prev_hash else 'NULL'} per {signer_name} (dentro il lock)")
+            print(
+                f"[{thread_name}] Letto prev_hash: {prev_hash[:10] if prev_hash else 'NULL'} per {signer_name} (dentro il lock)")
 
             # 2. Simula elaborazione / ritardo di rete
             # Questo ritardo è ancora utile per vedere l'effetto del lock
-            time.sleep(random.uniform(0.1, 0.3)) # Ritardo per simulazione
+            time.sleep(random.uniform(0.1, 0.3))  # Ritardo per simulazione
 
             # 3. Crea la firma
             data_to_sign = (prev_hash or '').encode() + doc_hash.encode()
-            current_signature = sign_data_for_simulation(private_key_pem, data_to_sign)
+            current_signature = sign_data_for_simulation(
+                private_key_pem, data_to_sign)
 
             # 4. Inserisci il nuovo blocco (PUNTO CRITICO)
             with conn_thread.cursor() as cur_insert:
@@ -120,23 +131,26 @@ def concurrent_insert_signature(
                     INSERT INTO signature_chain (document_id, signer, document_hash, prev_hash, signature)
                     VALUES (%s, %s, %s, %s, %s) RETURNING id;
                     """,
-                    (document_id_param, signer_name, doc_hash, prev_hash, current_signature)
+                    (document_id_param, signer_name,
+                     doc_hash, prev_hash, current_signature)
                 )
                 block_id = cur_insert.fetchone()[0]
-            conn_thread.commit() # Commit all'interno del lock
+            conn_thread.commit()  # Commit all'interno del lock
             print(f"[{thread_name}] {signer_name} ha inserito il blocco ID: {block_id} con prev_hash: {prev_hash[:10] if prev_hash else 'NULL'}, Signature: {current_signature[:10]}... (rilascio lock)")
         # Il lock viene rilasciato automaticamente uscendo dal blocco 'with db_operation_lock'
 
     except (Exception, psycopg2.Error) as error:
         print(f"[{thread_name}] Errore per {signer_name}: {error}")
         if conn_thread:
-            conn_thread.rollback() # Rollback in caso di errore
+            conn_thread.rollback()  # Rollback in caso di errore
     finally:
         if conn_thread:
             conn_thread.close()
 
+
 def check_for_forks(conn, document_id_param):
-    print(f"\n--- Controllo Biforcazioni per Documento ID: {document_id_param} ---")
+    print(
+        f"\n--- Controllo Biforcazioni per Documento ID: {document_id_param} ---")
     with conn.cursor() as cursor:
         cursor.execute(
             """
@@ -154,18 +168,22 @@ def check_for_forks(conn, document_id_param):
             for fork in forks:
                 print(f"  prev_hash '{fork[0]}' appare {fork[1]} volte.")
         else:
-            print("Nessuna biforcazione rilevata (prev_hash duplicati non trovati). La catena è sequenziale.")
+            print(
+                "Nessuna biforcazione rilevata (prev_hash duplicati non trovati). La catena è sequenziale.")
 
-        cursor.execute("SELECT id, signer, prev_hash, signature FROM signature_chain WHERE document_id = %s ORDER BY id", (document_id_param,))
+        cursor.execute(
+            "SELECT id, signer, prev_hash, signature FROM signature_chain WHERE document_id = %s ORDER BY id", (document_id_param,))
         print("\nStato finale della catena:")
         for row in cursor.fetchall():
-            print(f"  ID: {row[0]}, Firmatario: {row[1]}, PrevHash: {row[2][:10] if row[2] else 'NULL'}, Signature: {row[3][:10]}...")
+            print(
+                f"  ID: {row[0]}, Firmatario: {row[1]}, PrevHash: {row[2][:10] if row[2] else 'NULL'}, Signature: {row[3][:10]}...")
 
 
 if __name__ == "__main__":
     main_conn = None
     try:
-        main_conn = psycopg2.connect(dbname=db_name, user=db_user, password=db_password, host=db_host)
+        main_conn = psycopg2.connect(
+            dbname=db_name, user=db_user, password=db_password, host=db_host)
         clear_table(main_conn)
 
         doc_id = str(uuid4())
@@ -174,8 +192,10 @@ if __name__ == "__main__":
 
         # Firmatario Genesi
         priv_key_gen, _ = generate_keys_for_simulation()
-        genesis_signature = sign_data_for_simulation(priv_key_gen, doc_hash_main.encode()) # prev_hash è ''
-        insert_genesis_block(main_conn, doc_id, "FirmatarioGenesi", doc_hash_main, genesis_signature)
+        genesis_signature = sign_data_for_simulation(
+            priv_key_gen, doc_hash_main.encode())  # prev_hash è ''
+        insert_genesis_block(
+            main_conn, doc_id, "FirmatarioGenesi", doc_hash_main, genesis_signature)
 
         print("\nAvvio inserimenti concorrenti...")
 
@@ -186,11 +206,13 @@ if __name__ == "__main__":
         # Creazione dei thread
         thread1 = threading.Thread(
             target=concurrent_insert_signature,
-            args=(doc_id, "FirmatarioA", document_content_main, priv_key_A, "Thread-1")
+            args=(doc_id, "FirmatarioA", document_content_main,
+                  priv_key_A, "Thread-1")
         )
         thread2 = threading.Thread(
             target=concurrent_insert_signature,
-            args=(doc_id, "FirmatarioB", document_content_main, priv_key_B, "Thread-2")
+            args=(doc_id, "FirmatarioB", document_content_main,
+                  priv_key_B, "Thread-2")
         )
 
         # Avvio dei thread
