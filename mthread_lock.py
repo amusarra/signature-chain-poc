@@ -1,7 +1,6 @@
 import hashlib
 import psycopg2
 from uuid import uuid4
-# from datetime import datetime # Non usata direttamente in questo script modificato
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 import os
@@ -18,10 +17,17 @@ db_host = os.environ.get("DB_HOST", "localhost")
 # Lock globale per serializzare le operazioni critiche sul DB
 db_operation_lock = threading.Lock()
 
-# --- Funzioni Crittografiche (semplificate/adattate da main.py) ---
-
 
 def generate_keys_for_simulation():
+    """
+    Genera una coppia di chiavi RSA (privata e pubblica) a 2048 bit per la simulazione.
+
+    Returns:
+        tuple: Una tupla contenente:
+               - pem_private (bytes): La chiave privata in formato PEM.
+               - pem_public (bytes | None): La chiave pubblica in formato PEM, o None se non generata.
+                                           In questa versione, la chiave pubblica non è usata e si restituisce None.
+    """
     private_key = rsa.generate_private_key(
         public_exponent=65537, key_size=2048)
     pem_private = private_key.private_bytes(
@@ -35,7 +41,17 @@ def generate_keys_for_simulation():
     return pem_private, None  # Restituiamo None per la chiave pubblica non usata
 
 
-def sign_data_for_simulation(private_key_pem, data_to_sign):
+def sign_data_for_simulation(private_key_pem: bytes, data_to_sign: bytes) -> str:
+    """
+    Firma i dati forniti utilizzando una chiave privata RSA PEM.
+
+    Args:
+        private_key_pem (bytes): La chiave privata in formato PEM.
+        data_to_sign (bytes): I dati da firmare.
+
+    Returns:
+        str: La firma esadecimale dei dati.
+    """
     private_key = serialization.load_pem_private_key(
         private_key_pem, password=None)
     signature_bytes = private_key.sign(
@@ -45,22 +61,46 @@ def sign_data_for_simulation(private_key_pem, data_to_sign):
     return signature_bytes.hex()
 
 
-def get_document_hash(document_content):
+def get_document_hash(document_content: str) -> str:
+    """
+    Calcola l'hash SHA256 del contenuto di un documento.
+
+    Args:
+        document_content (str): Il contenuto del documento.
+
+    Returns:
+        str: L'hash SHA256 esadecimale del contenuto.
+    """
     return hashlib.sha256(document_content.encode()).hexdigest()
 
-# --- Funzioni di Interazione con il DB per la Simulazione ---
 
+def clear_table(conn) -> None:
+    """
+    Rimuove tutti i record dalla tabella 'signature_chain'.
 
-def clear_table(conn):
+    Args:
+        conn: Connessione attiva al database psycopg2.
+    """
     with conn.cursor() as cursor:
         cursor.execute("DELETE FROM signature_chain;")
     conn.commit()
     print("Tabella signature_chain pulita.")
 
-# get_last_signature_for_doc non è più usata direttamente dai thread se il lock protegge la lettura
 
+def insert_genesis_block(conn, document_id_param: str, signer_name: str, doc_hash: str, signature_param: str) -> int:
+    """
+    Inserisce il blocco genesi (il primo blocco) per una nuova catena di firme.
 
-def insert_genesis_block(conn, document_id_param, signer_name, doc_hash, signature_param):
+    Args:
+        conn: Connessione attiva al database psycopg2.
+        document_id_param (str): L'ID del documento.
+        signer_name (str): Il nome del firmatario del blocco genesi.
+        doc_hash (str): L'hash del documento originale.
+        signature_param (str): La firma del blocco genesi (basata solo sul doc_hash).
+
+    Returns:
+        int: L'ID del blocco genesi inserito.
+    """
     with conn.cursor() as cursor:
         cursor.execute(
             """
@@ -77,14 +117,23 @@ def insert_genesis_block(conn, document_id_param, signer_name, doc_hash, signatu
 
 
 def concurrent_insert_signature(
-        document_id_param,
-        signer_name,
-        document_content,
-        private_key_pem,
-        thread_name):
+        document_id_param: str,
+        signer_name: str,
+        document_content: str,
+        private_key_pem: bytes,
+        thread_name: str) -> None:
     """
-    Simula l'inserimento di una firma, utilizzando un lock applicativo
-    per prevenire race conditions.
+    Simula l'inserimento concorrente di una firma nella catena, utilizzando un
+    lock a livello applicativo (`threading.Lock`) per serializzare le operazioni
+    critiche di lettura dell'ultimo hash e inserimento del nuovo blocco.
+    Questa funzione è progettata per essere eseguita in un thread separato.
+
+    Args:
+        document_id_param (str): L'ID del documento a cui aggiungere la firma.
+        signer_name (str): Il nome del firmatario.
+        document_content (str): Il contenuto del documento (usato per l'hash).
+        private_key_pem (bytes): La chiave privata PEM del firmatario.
+        thread_name (str): Un nome identificativo per il thread (per il logging).
     """
     conn_thread = None
     try:
@@ -101,10 +150,6 @@ def concurrent_insert_signature(
             # 1. Leggi l'ultimo prev_hash (PUNTO CRITICO)
             # Ora questa operazione è protetta dal lock applicativo
             with conn_thread.cursor() as cur_select:
-                # SELECT ... FOR UPDATE non è più strettamente necessario qui,
-                # poiché il lock applicativo serializza l'intera logica.
-                # Potrebbe essere lasciato per una "difesa in profondità" o rimosso.
-                # Per questo esempio, lo rimuoviamo per mostrare l'effetto del lock applicativo.
                 cur_select.execute(
                     "SELECT signature FROM signature_chain WHERE document_id = %s ORDER BY id DESC LIMIT 1",
                     (document_id_param,)
@@ -116,7 +161,6 @@ def concurrent_insert_signature(
                 f"[{thread_name}] Letto prev_hash: {prev_hash[:10] if prev_hash else 'NULL'} per {signer_name} (dentro il lock)")
 
             # 2. Simula elaborazione / ritardo di rete
-            # Questo ritardo è ancora utile per vedere l'effetto del lock
             time.sleep(random.uniform(0.1, 0.3))  # Ritardo per simulazione
 
             # 3. Crea la firma
@@ -148,7 +192,16 @@ def concurrent_insert_signature(
             conn_thread.close()
 
 
-def check_for_forks(conn, document_id_param):
+def check_for_forks(conn, document_id_param: str) -> None:
+    """
+    Controlla la presenza di biforcazioni (forks) nella catena di firme
+    per un dato document_id. Una biforcazione si verifica se più blocchi
+    hanno lo stesso prev_hash. Stampa anche lo stato finale della catena.
+
+    Args:
+        conn: Connessione attiva al database psycopg2.
+        document_id_param (str): L'ID del documento da controllare.
+    """
     print(
         f"\n--- Controllo Biforcazioni per Documento ID: {document_id_param} ---")
     with conn.cursor() as cursor:

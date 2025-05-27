@@ -18,10 +18,16 @@ db_user = os.environ.get("SUPER_DB_USER", "postgres")
 db_password = os.environ.get("SUPER_DB_PASSWORD", "postgres")
 db_host = os.environ.get("DB_HOST", "localhost")
 
-# --- Funzioni Crittografiche (semplificate/adattate da main.py) ---
-
 
 def generate_keys_for_simulation():
+    """
+    Genera una coppia di chiavi RSA (privata e pubblica) a 2048 bit per la simulazione.
+
+    Returns:
+        tuple: Una tupla contenente:
+               - pem_private (bytes): La chiave privata in formato PEM.
+               - pem_public (bytes): La chiave pubblica in formato PEM.
+    """
     private_key = rsa.generate_private_key(
         public_exponent=65537, key_size=2048)
     pem_private = private_key.private_bytes(
@@ -35,7 +41,17 @@ def generate_keys_for_simulation():
     return pem_private, pem_public
 
 
-def sign_data_for_simulation(private_key_pem, data_to_sign):
+def sign_data_for_simulation(private_key_pem: bytes, data_to_sign: bytes) -> str:
+    """
+    Firma i dati forniti utilizzando una chiave privata RSA PEM.
+
+    Args:
+        private_key_pem (bytes): La chiave privata in formato PEM.
+        data_to_sign (bytes): I dati da firmare.
+
+    Returns:
+        str: La firma esadecimale dei dati.
+    """
     private_key = serialization.load_pem_private_key(
         private_key_pem, password=None)
     signature_bytes = private_key.sign(
@@ -45,20 +61,43 @@ def sign_data_for_simulation(private_key_pem, data_to_sign):
     return signature_bytes.hex()
 
 
-def get_document_hash(document_content):
+def get_document_hash(document_content: str) -> str:
+    """
+    Calcola l'hash SHA256 del contenuto di un documento.
+
+    Args:
+        document_content (str): Il contenuto del documento.
+
+    Returns:
+        str: L'hash SHA256 esadecimale del contenuto.
+    """
     return hashlib.sha256(document_content.encode()).hexdigest()
 
-# --- Funzioni di Interazione con il DB per la Simulazione ---
 
+def clear_table(conn) -> None:
+    """
+    Rimuove tutti i record dalla tabella 'signature_chain'.
 
-def clear_table(conn):
+    Args:
+        conn: Connessione attiva al database psycopg2.
+    """
     with conn.cursor() as cursor:
         cursor.execute("DELETE FROM signature_chain;")
     conn.commit()
     print("Tabella signature_chain pulita.")
 
 
-def get_last_signature_for_doc(conn, document_id_param):
+def get_last_signature_for_doc(conn, document_id_param: str) -> str | None:
+    """
+    Recupera l'ultima firma (signature) per un dato document_id dalla tabella.
+
+    Args:
+        conn: Connessione attiva al database psycopg2.
+        document_id_param (str): L'ID del documento per cui cercare l'ultima firma.
+
+    Returns:
+        str | None: L'ultima firma se trovata, altrimenti None.
+    """
     with conn.cursor() as cursor:
         cursor.execute(
             "SELECT signature FROM signature_chain WHERE document_id = %s ORDER BY id DESC LIMIT 1",
@@ -67,7 +106,20 @@ def get_last_signature_for_doc(conn, document_id_param):
         return result[0] if result else None
 
 
-def insert_genesis_block(conn, document_id_param, signer_name, doc_hash, signature_param):
+def insert_genesis_block(conn, document_id_param: str, signer_name: str, doc_hash: str, signature_param: str) -> int:
+    """
+    Inserisce il blocco genesi (il primo blocco) per una nuova catena di firme.
+
+    Args:
+        conn: Connessione attiva al database psycopg2.
+        document_id_param (str): L'ID del documento.
+        signer_name (str): Il nome del firmatario del blocco genesi.
+        doc_hash (str): L'hash del documento originale.
+        signature_param (str): La firma del blocco genesi (basata solo sul doc_hash).
+
+    Returns:
+        int: L'ID del blocco genesi inserito.
+    """
     with conn.cursor() as cursor:
         cursor.execute(
             """
@@ -84,14 +136,25 @@ def insert_genesis_block(conn, document_id_param, signer_name, doc_hash, signatu
 
 
 def concurrent_insert_signature(
-        document_id_param,
-        signer_name,
-        document_content,
-        private_key_pem,
-        thread_name):
+        document_id_param: str,
+        signer_name: str,
+        document_content: str,
+        private_key_pem: bytes,
+        thread_name: str) -> None:
     """
-    Simula l'inserimento di una firma, introducendo un ritardo
-    per aumentare la probabilità di una race condition.
+    Simula l'inserimento concorrente di una firma nella catena.
+    Questa funzione è progettata per essere eseguita in un thread separato.
+    Tenta di leggere l'ultimo hash e inserire un nuovo blocco,
+    potenzialmente causando una race condition se non adeguatamente sincronizzata.
+    Utilizza SELECT ... FOR UPDATE per tentare di serializzare l'accesso
+    alla lettura dell'ultimo hash all'interno di una transazione.
+
+    Args:
+        document_id_param (str): L'ID del documento a cui aggiungere la firma.
+        signer_name (str): Il nome del firmatario.
+        document_content (str): Il contenuto del documento (usato per l'hash).
+        private_key_pem (bytes): La chiave privata PEM del firmatario.
+        thread_name (str): Un nome identificativo per il thread (per il logging).
     """
     conn_thread = None
     try:
@@ -102,12 +165,12 @@ def concurrent_insert_signature(
         doc_hash = get_document_hash(document_content)
 
         # 1. Leggi l'ultimo prev_hash (PUNTO CRITICO)
-        # In una transazione per coerenza, ma il lock FOR UPDATE sarebbe meglio
+        # In una transazione per coerenza, con SELECT ... FOR UPDATE per tentare di serializzare.
         with conn_thread.cursor()as cur_select:
             cur_select.execute(
                 "SELECT signature FROM signature_chain WHERE document_id = %s ORDER BY id DESC LIMIT 1 FOR UPDATE",
                 (document_id_param,)
-            )  # Aggiunto FOR UPDATE per tentare di serializzare
+            )
             result = cur_select.fetchone()
             prev_hash = result[0] if result else None
 
@@ -115,8 +178,7 @@ def concurrent_insert_signature(
             f"[{thread_name}] Letto prev_hash: {prev_hash[:10] if prev_hash else 'NULL'} per {signer_name}")
 
         # 2. Simula elaborazione / ritardo di rete
-        # Questo ritardo aumenta la finestra temporale per la race condition
-        # se non ci fosse il FOR UPDATE o un lock a livello applicativo.
+        # Questo ritardo aumenta la finestra temporale per la race condition.
         time.sleep(random.uniform(0.2, 0.8))  # Ritardo casuale
 
         # 3. Crea la firma
@@ -135,6 +197,7 @@ def concurrent_insert_signature(
                  doc_hash, prev_hash, current_signature)
             )
             block_id = cur_insert.fetchone()[0]
+        # Commit della transazione che include il SELECT FOR UPDATE e l'INSERT
         conn_thread.commit()
         print(f"[{thread_name}] {signer_name} ha inserito il blocco ID: {block_id} con prev_hash: {prev_hash[:10] if prev_hash else 'NULL'}, Signature: {current_signature[:10]}...")
 
@@ -147,7 +210,16 @@ def concurrent_insert_signature(
             conn_thread.close()
 
 
-def check_for_forks(conn, document_id_param):
+def check_for_forks(conn, document_id_param: str) -> None:
+    """
+    Controlla la presenza di biforcazioni (forks) nella catena di firme
+    per un dato document_id. Una biforcazione si verifica se più blocchi
+    hanno lo stesso prev_hash. Stampa anche lo stato finale della catena.
+
+    Args:
+        conn: Connessione attiva al database psycopg2.
+        document_id_param (str): L'ID del documento da controllare.
+    """
     print(
         f"\n--- Controllo Biforcazioni per Documento ID: {document_id_param} ---")
     with conn.cursor() as cursor:
@@ -189,9 +261,10 @@ if __name__ == "__main__":
         doc_hash_main = get_document_hash(document_content_main)
 
         # Firmatario Genesi
+        # Ignoriamo la chiave pubblica qui
         priv_key_gen, _ = generate_keys_for_simulation()
         genesis_signature = sign_data_for_simulation(
-            priv_key_gen, doc_hash_main.encode())  # prev_hash è ''
+            priv_key_gen, doc_hash_main.encode())  # prev_hash è '' per il genesi
         insert_genesis_block(
             main_conn, doc_id, "FirmatarioGenesi", doc_hash_main, genesis_signature)
 

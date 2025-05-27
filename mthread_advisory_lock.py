@@ -14,12 +14,17 @@ db_user = os.environ.get("SUPER_DB_USER", "postgres")
 db_password = os.environ.get("SUPER_DB_PASSWORD", "postgres")
 db_host = os.environ.get("DB_HOST", "localhost")
 
-# Rimosso: db_operation_lock = threading.Lock()
-
-# --- Funzioni Crittografiche ---
-
 
 def generate_keys_for_simulation():
+    """
+    Genera una coppia di chiavi RSA (privata e pubblica) a 2048 bit per la simulazione.
+
+    Returns:
+        tuple: Una tupla contenente:
+               - pem_private (bytes): La chiave privata in formato PEM.
+               - pem_public (bytes | None): La chiave pubblica in formato PEM, o None se non generata.
+                                           In questa versione, la chiave pubblica non è usata e si restituisce None.
+    """
     private_key = rsa.generate_private_key(
         public_exponent=65537, key_size=2048)
     pem_private = private_key.private_bytes(
@@ -29,7 +34,17 @@ def generate_keys_for_simulation():
     return pem_private, None
 
 
-def sign_data_for_simulation(private_key_pem, data_to_sign):
+def sign_data_for_simulation(private_key_pem: bytes, data_to_sign: bytes) -> str:
+    """
+    Firma i dati forniti utilizzando una chiave privata RSA PEM.
+
+    Args:
+        private_key_pem (bytes): La chiave privata in formato PEM.
+        data_to_sign (bytes): I dati da firmare.
+
+    Returns:
+        str: La firma esadecimale dei dati.
+    """
     private_key = serialization.load_pem_private_key(
         private_key_pem, password=None)
     signature_bytes = private_key.sign(
@@ -39,29 +54,66 @@ def sign_data_for_simulation(private_key_pem, data_to_sign):
     return signature_bytes.hex()
 
 
-def get_document_hash(document_content):
+def get_document_hash(document_content: str) -> str:
+    """
+    Calcola l'hash SHA256 del contenuto di un documento.
+
+    Args:
+        document_content (str): Il contenuto del documento.
+
+    Returns:
+        str: L'hash SHA256 esadecimale del contenuto.
+    """
     return hashlib.sha256(document_content.encode()).hexdigest()
 
 
 def generate_advisory_lock_key(document_id_str: str) -> int:
     """
-    Genera una chiave bigint per l'advisory lock dall'ID del documento.
-    Prende i primi 15 caratteri esadecimali dell'hash SHA256 del document_id.
-    (15 hex chars = 60 bits, ben dentro il range di un bigint a 64 bit)
+    Genera una chiave bigint (intero a 64 bit) per l'advisory lock di PostgreSQL
+    a partire dall'ID del documento.
+    Utilizza i primi 15 caratteri esadecimali dell'hash SHA256 del document_id
+    per creare un intero. Questo assicura una chiave univoca e deterministica
+    per un dato document_id, adatta per `pg_advisory_xact_lock(bigint)`.
+
+    Args:
+        document_id_str (str): L'ID del documento (stringa UUID).
+
+    Returns:
+        int: Una chiave intera a 64 bit per l'advisory lock.
     """
     hasher = hashlib.sha256(document_id_str.encode('utf-8'))
+    # 15 caratteri esadecimali corrispondono a 60 bit,
+    # che rientrano comodamente in un bigint (64 bit).
     return int(hasher.hexdigest()[:15], 16)
 
 
-# --- Funzioni di Interazione con il DB ---
-def clear_table(conn):
+def clear_table(conn) -> None:
+    """
+    Rimuove tutti i record dalla tabella 'signature_chain'.
+
+    Args:
+        conn: Connessione attiva al database psycopg2.
+    """
     with conn.cursor() as cursor:
         cursor.execute("DELETE FROM signature_chain;")
     conn.commit()
     print("Tabella signature_chain pulita.")
 
 
-def insert_genesis_block(conn, document_id_param, signer_name, doc_hash, signature_param):
+def insert_genesis_block(conn, document_id_param: str, signer_name: str, doc_hash: str, signature_param: str) -> int:
+    """
+    Inserisce il blocco genesi (il primo blocco) per una nuova catena di firme.
+
+    Args:
+        conn: Connessione attiva al database psycopg2.
+        document_id_param (str): L'ID del documento.
+        signer_name (str): Il nome del firmatario del blocco genesi.
+        doc_hash (str): L'hash del documento originale.
+        signature_param (str): La firma del blocco genesi (basata solo sul doc_hash).
+
+    Returns:
+        int: L'ID del blocco genesi inserito.
+    """
     with conn.cursor() as cursor:
         cursor.execute(
             """
@@ -78,24 +130,39 @@ def insert_genesis_block(conn, document_id_param, signer_name, doc_hash, signatu
 
 
 def concurrent_insert_signature(
-        document_id_param,
-        signer_name,
-        document_content,
-        private_key_pem,
-        thread_name):
+        document_id_param: str,
+        signer_name: str,
+        document_content: str,
+        private_key_pem: bytes,
+        thread_name: str) -> None:
+    """
+    Simula l'inserimento concorrente di una firma nella catena, utilizzando
+    un advisory lock transazionale di PostgreSQL (`pg_advisory_xact_lock`)
+    per serializzare le operazioni critiche.
+    Questa funzione è progettata per essere eseguita in un thread separato.
+
+    Args:
+        document_id_param (str): L'ID del documento a cui aggiungere la firma.
+        signer_name (str): Il nome del firmatario.
+        document_content (str): Il contenuto del documento (usato per l'hash).
+        private_key_pem (bytes): La chiave privata PEM del firmatario.
+        thread_name (str): Un nome identificativo per il thread (per il logging).
+    """
     conn_thread = None
     advisory_lock_key = generate_advisory_lock_key(document_id_param)
 
     try:
         conn_thread = psycopg2.connect(
             dbname=db_name, user=db_user, password=db_password, host=db_host)
-        conn_thread.autocommit = False  # Cruciale per pg_advisory_xact_lock
+        # Cruciale per pg_advisory_xact_lock: il lock dura per la transazione.
+        conn_thread.autocommit = False
 
         doc_hash = get_document_hash(document_content)
 
         with conn_thread.cursor() as cur:  # Un unico cursore per la transazione
             # Acquisire l'Advisory Lock transazionale
-            print(f"[{thread_name}] Tentativo di acquisire advisory lock {advisory_lock_key} per {signer_name} su doc {document_id_param}")
+            print(
+                f"[{thread_name}] Tentativo di acquisire advisory lock {advisory_lock_key} per {signer_name} su doc {document_id_param}")
             cur.execute("SELECT pg_advisory_xact_lock(%s);",
                         (advisory_lock_key,))
             print(
@@ -132,13 +199,16 @@ def concurrent_insert_signature(
             block_id = cur.fetchone()[0]
             # --- FINE SEZIONE CRITICA ---
 
-            conn_thread.commit()  # Commit della transazione, rilascia pg_advisory_xact_lock
-            print(f"[{thread_name}] {signer_name} ha inserito il blocco ID: {block_id}. Commit e rilascio lock {advisory_lock_key}.")
+            # Commit della transazione, rilascia automaticamente pg_advisory_xact_lock
+            conn_thread.commit()
+            print(
+                f"[{thread_name}] {signer_name} ha inserito il blocco ID: {block_id}. Commit e rilascio lock {advisory_lock_key}.")
 
     except (Exception, psycopg2.Error) as error:
         print(f"[{thread_name}] Errore per {signer_name}: {error}")
         if conn_thread:
-            conn_thread.rollback()  # Rollback della transazione, rilascia pg_advisory_xact_lock
+            # Rollback della transazione, rilascia automaticamente pg_advisory_xact_lock
+            conn_thread.rollback()
             print(
                 f"[{thread_name}] Rollback e rilascio lock {advisory_lock_key} a causa di errore.")
     finally:
@@ -146,7 +216,16 @@ def concurrent_insert_signature(
             conn_thread.close()
 
 
-def check_for_forks(conn, document_id_param):
+def check_for_forks(conn, document_id_param: str) -> None:
+    """
+    Controlla la presenza di biforcazioni (forks) nella catena di firme
+    per un dato document_id. Una biforcazione si verifica se più blocchi
+    hanno lo stesso prev_hash. Stampa anche lo stato finale della catena.
+
+    Args:
+        conn: Connessione attiva al database psycopg2.
+        document_id_param (str): L'ID del documento da controllare.
+    """
     print(
         f"\n--- Controllo Biforcazioni per Documento ID: {document_id_param} ---")
     with conn.cursor() as cursor:
