@@ -12,19 +12,20 @@ layout: "article"
 slug: "signature-chain-garanzia-autenticita-integrita-sequenzialita-documenti-digitali"
 permalink: ""
 lang: "it"
-version: "v1.1.2"
+version: "v1.1.3"
 scope: "Public"
 state: Release
 ---
 
 ## Cronologia delle revisioni
 
-| Versione | Data       | Autore          | Descrizione delle Modifiche                |
-| :------- | :--------- | :-------------- | :----------------------------------------- |
-| 1.0.0    | 2025-05-17 | Antonio Musarra | Primo stesura                              |
-| 1.1.0    | 2025-05-24 | Antonio Musarra | Aggiunto il capitolo Appendice             |
-| 1.1.1    | 2025-05-25 | Antonio Musarra | Correzioni di typo error e semplificazione |
-| 1.1.2    | 2025-05-25 | Antonio Musarra | Revisione capitolo Riferimenti utili       |
+| Versione | Data       | Autore          | Descrizione delle Modifiche                     |
+| :------- | :--------- | :-------------- | :---------------------------------------------- |
+| 1.0.0    | 2025-05-17 | Antonio Musarra | Primo stesura                                   |
+| 1.1.0    | 2025-05-24 | Antonio Musarra | Aggiunto il capitolo Appendice                  |
+| 1.1.1    | 2025-05-25 | Antonio Musarra | Correzioni di typo error e semplificazione      |
+| 1.1.2    | 2025-05-25 | Antonio Musarra | Revisione capitolo Riferimenti utili            |
+| 1.1.3    | 2025-05-26 | Antonio Musarra | Aggiunto il capitolo Gestione della concorrenza |
 
 [TOC]
 
@@ -193,6 +194,56 @@ Le proprietà intrinseche che conferiscono alla Signature Chain il suo valore e 
 * **Integrità del documento**: il `document_hash` assicura che tutte le firme presenti nella catena si riferiscano univocamente alla medesima versione del documento. Non vi è possibilità di versioni differenti o di modifiche occulte che possano compromettere la validità delle firme. La garanzia è che il contenuto sottoscritto è esattamente quello, senza ambiguità o interpretazioni errate.  
 * **Sequenzialità verificabile**: il `prev_hash` stabilisce un legame cronologico inconfutabile tra le firme. Ciò consente di accertare l'ordine esatto di apposizione delle firme, eliminando dubbi o contestazioni. Si genera una traccia di audit chiara e cristallina, essenziale per processi che richiedono una rigorosa cronologia, come contratti con molteplici firmatari o workflow di approvazione complessi.  
 * **Autenticità del firmatario**: ogni signature è generata utilizzando la chiave privata del firmatario, la quale è unica e segreta per tale individuo. Questo meccanismo consente la verifica dell'autenticità della firma tramite la chiave pubblica corrispondente, che è invece di dominio pubblico e può essere liberamente condivisa. L'identità del firmatario è crittograficamente garantita, escludendo l'impersonificazione.
+
+<div style="page-break-after: always; break-after: page;"></div>
+
+## Gestione della concorrenza: prevenire biforcazioni nella catena
+
+Nei sistemi multi-utente o multi-processo, dove più entità potrebbero tentare di apporre firme contemporaneamente sullo stesso documento (o su documenti diversi, ma con accessi concorrenti alla tabella `signature_chain`), emerge una sfida critica: la **gestione della concorrenza**. Senza meccanismi adeguati, si rischia di compromettere la sequenzialità univoca della catena, portando a **"biforcazioni" indesiderate**.
+
+### Il problema della race condition
+
+L'operazione di aggiunta di un nuovo blocco alla Signature Chain prevede tipicamente i seguenti passaggi:
+
+1. **Lettura dell'ultimo `prev_hash`**: si interroga il database per ottenere la `signature` dell'ultimo blocco inserito per un determinato `document_id`. Questo valore diventerà il `prev_hash` del nuovo blocco.
+2. **Calcolo della nuova `signature`**: si calcola la firma digitale per il nuovo blocco, utilizzando il `prev_hash` appena letto e il `document_hash` del documento corrente.
+3. **Inserimento del nuovo blocco**: si inserisce il nuovo record nella tabella `signature_chain` con il `prev_hash` e la nuova `signature`.
+
+Se due processi (Processo A e Processo B) tentano di eseguire questi passaggi quasi simultaneamente, può verificarsi una **race condition**:
+
+* Il Processo A legge l'ultimo `prev_hash` (es. `HASH_X`).
+* Prima che il Processo A possa inserire il suo nuovo blocco, il Processo B legge anch'esso l'ultimo `prev_hash` (che è ancora `HASH_X`).
+* Il Processo A calcola la sua firma e inserisce il suo blocco (Blocco A), che avrà `prev_hash = HASH_X`.
+* Il Processo B calcola la sua firma (basandosi anch'esso su `HASH_X`) e inserisce il suo blocco (Blocco B), che avrà anch'esso `prev_hash = HASH_X`.
+
+### Conseguenze: biforcazioni della catena
+
+Il risultato di questa race condition è che ora esistono due blocchi distinti (Blocco A e Blocco B) che puntano allo stesso blocco precedente (quello la cui firma era `HASH_X`). Questo crea una **biforcazione** nella catena: invece di una singola sequenza lineare di firme, **si hanno due "rami" che partono dallo stesso punto**.
+
+Una catena biforcuta perde la sua proprietà di sequenzialità univoca e può rendere ambigua o fallimentare la verifica dell'intera catena, poiché non è più chiaro quale sia il "vero" blocco successivo.
+
+### Strategie di mitigazione
+
+Per garantire l'integrità sequenziale in un ambiente concorrente, è essenziale serializzare l'operazione critica di "leggere l'ultimo hash e inserire il successivo". Diverse strategie possono essere adottate, alcune delle quali sono:
+
+1. **Locking a Livello di Database (`SELECT ... FOR UPDATE`)**:
+    * Quando si legge l'ultimo `prev_hash`, si può utilizzare la clausola `SELECT ... FOR UPDATE` (o `SELECT ... FOR SHARE` a seconda della logica esatta) all'interno di una transazione. Questo meccanismo blocca le righe selezionate (o potenzialmente l'intera tabella, a seconda della granularità del lock e degli indici) impedendo ad altre transazioni di modificarle o acquisire lock conflittuali fino al completamento della transazione corrente. L'intera sequenza di lettura, calcolo e inserimento deve avvenire in un'unica transazione atomica.
+
+2. **Livelli di Isolamento delle Transazioni (`SERIALIZABLE`)**:
+    * Impostare il livello di isolamento della transazione a `SERIALIZABLE` per le operazioni di inserimento nella catena. Questo è il livello di isolamento più rigoroso offerto dai database SQL e garantisce che l'effetto di transazioni concorrenti sia identico a quello di un'esecuzione seriale delle stesse. Sebbene molto robusto, può portare a un maggior numero di errori di serializzazione (che l'applicazione deve essere pronta a gestire, tipicamente riprovando la transazione) e può avere un impatto sulle prestazioni.
+
+3. **Lock Esplicito a Livello Applicativo**:
+    * Per la concorrenza all'interno di un singolo processo (ad esempio, tra thread diversi in un'applicazione Python), si può utilizzare un lock a livello di codice (es. `threading.Lock`). Questo assicura che solo un thread alla volta possa eseguire la sezione critica del codice che modifica la catena.
+    * Per ambienti multi-processo o distribuiti, questa soluzione diventa più complessa e richiede meccanismi di locking distribuiti (es. basati su Redis, ZooKeeper, o lock a livello di database come gli advisory locks).
+
+4. **Advisory Locks del Database**:
+    * Molti database, incluso PostgreSQL (`pg_advisory_xact_lock`, `pg_advisory_lock`), offrono "advisory locks". Questi sono lock espliciti che l'applicazione può acquisire su un identificatore numerico arbitrario. L'applicazione può definire un identificatore univoco per ogni catena di documenti (es. basato sul `document_id`) e acquisire un lock su questo identificatore prima di modificare la catena. Questo serializza gli accessi a una specifica catena, anche tra processi diversi.
+
+### Considerazioni per la PoC e sistemi reali
+
+La Proof of Concept presentata in questo articolo, essendo eseguita come un singolo script Python sequenziale, non manifesta intrinsecamente problemi di concorrenza. Tuttavia, è fondamentale sottolineare che qualsiasi implementazione di una Signature Chain destinata a un ambiente di produzione multi-utente o con accessi concorrenti **deve** implementare una delle strategie di mitigazione sopra descritte. La scelta della strategia dipenderà dall'architettura specifica del sistema, dal carico previsto e dalle caratteristiche del database utilizzato.
+
+La mancata gestione della concorrenza può invalidare le garanzie di sequenzialità e unicità della catena, minando la fiducia nel sistema. Gli script di simulazione (`mthread_lock.py` e `mthread_advisory_lock.py`) forniti nel repository GitHub della PoC dimostrano come il lock a livello applicativo e gli advisory lock di PostgreSQL possano essere utilizzati per prevenire le biforcazioni in scenari multi-threading. Lo script `mthread.py` illustra un esempio di come la concorrenza possa causare problemi e creare biforcazioni nella catena, evidenziando l'importanza di implementare correttamente i meccanismi di locking.
 
 <div style="page-break-after: always; break-after: page;"></div>
 
@@ -632,7 +683,7 @@ La selezione degli algoritmi crittografici appropriati è una decisione di cruci
 
 1. **Livello di sicurezza richiesto**: è fondamentale valutare la sensibilità dei dati da proteggere e il periodo di tempo per il quale tale protezione deve essere garantita. Ad esempio, la sicurezza richiesta per segreti di stato o dati sanitari sensibili è intrinsecamente superiore rispetto a quella necessaria per un modulo di iscrizione a un corso di cucina. È imperativo condurre una valutazione accurata del rischio.  
 2. **Prestazioni**: gli algoritmi più complessi o l'utilizzo di chiavi di maggiore lunghezza possono comportare un rallentamento delle operazioni. Qualora sia necessario firmare migliaia di documenti al secondo, la velocità di elaborazione diviene un fattore determinante. Gli algoritmi ECC/EdDSA spesso rappresentano un compromesso ottimale tra sicurezza e velocità, offrendo prestazioni elevate senza compromettere la robustezza crittografica. È necessario bilanciare i requisiti di sicurezza con quelli di usabilità.  
-3. **Compatibilità e standard**: è essenziale verificare la conformità agli standard di settore (ad esempio, le normative legali specifiche, come il Regolamento [eIDAS](https://it.wikipedia.org/wiki/EIDAS) in Europa per le firme elettroniche) e assicurarsi che l'algoritmo selezionato sia compatibile con altri sistemi o piattaforme con cui è prevista l'interazione. L'obiettivo è evitare la creazione di un sistema isolato e non interoperabile.  
+3. **Compatibilità e standard**: è essenziale verificare la conformità agli standard di settore (ad esempio, le normative legali specifiche, come il Regolamento [eIDAS](https://it.wikipedia.org/wiki/EIDAS) in Europa per le firme elettroniche qualificate) e assicurarsi che l'algoritmo selezionato sia compatibile con altri sistemi o piattaforme con cui è prevista l'interazione. L'obiettivo è evitare la creazione di un sistema isolato e non interoperabile.  
 4. **Supporto delle librerie**: si raccomanda di verificare che le librerie di programmazione impiegate (quali cryptography in Python, o altre equivalenti in Java, C#, ecc.) forniscano un supporto completo agli algoritmi scelti. L'implementazione manuale di algoritmi crittografici è un'operazione complessa e soggetta a errori, con potenziali conseguenze gravi. È preferibile affidarsi a librerie ben testate e validate.  
 5. **Resistenza quantistica**: questo è un aspetto di cruciale importanza per il futuro, paragonabile a una minaccia emergente. Gli algoritmi crittografici attualmente in uso (RSA, ECC, SHA-2, SHA-3) non sono considerati resistenti agli attacchi da parte di futuri computer quantistici di grandi dimensioni, i quali potrebbero essere in grado di decifrarli in tempi rapidi. La crittografia post-quantistica (PQC) costituisce un campo di ricerca estremamente attivo, volto a sviluppare soluzioni per questa minaccia futura. Per sistemi che richiedono una sicurezza a lunghissimo termine (ad esempio, per documenti la cui validità deve perdurare per 30-50 anni), è fondamentale monitorare gli sviluppi della PQC e considerare l'adozione di algoritmi "quantum-safe" una volta che questi saranno standardizzati e avranno raggiunto un adeguato livello di maturità.
 
